@@ -6,6 +6,16 @@ import Contacts from './pages/Contacts';
 import Login from './pages/Login';
 import Tasks from './pages/Tasks';
 import Users from './pages/Users';
+import { validateEnv, isDevelopment } from './config';
+
+// Validate environment variables on startup
+try {
+    validateEnv();
+    console.log('Is development:', isDevelopment());
+} catch (error) {
+    console.error('Environment validation failed:', error);
+    process.exit(1);
+}
 
 const theme = createTheme({ 
   typography: {
