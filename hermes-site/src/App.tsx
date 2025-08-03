@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Tasks from './pages/Tasks';
 import Users from './pages/Users';
 import { validateEnv } from './config';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Validate environment variables on startup
 validateEnv();
@@ -26,12 +27,15 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Login />} />
-          <Route path="/app" element={<AppLayout />}>
-            <Route index element={<Navigate to="tasks" replace />} />
-            <Route path="tasks" element={<Tasks />} />
-            <Route path="contacts" element={<Contacts />} />
-            <Route path="users" element={<Users />} />
+          <Route element={<ProtectedRoute />}>
+            <Route path="/app" element={<AppLayout />}>
+                <Route index element={<Navigate to="tasks" replace />} />
+                <Route path="tasks" element={<Tasks />} />
+                <Route path="contacts" element={<Contacts />} />
+                <Route path="users" element={<Users />} />
+            </Route>
           </Route>
+          
         </Routes>
       </BrowserRouter>
     </ThemeProvider>
