@@ -2,14 +2,13 @@ import BoltIcon from '@mui/icons-material/Bolt';
 import { Box, Stack, Typography } from '@mui/material';
 import Button from '@mui/material/Button';
 import HackLogoLink from '../components/HackIllinoisLogo';
-import { useNavigate } from 'react-router';
-
+import { BASE_BACKEND_URL } from '../config';
 
 function Login() {
-    const navigate = useNavigate();
     function handleLogin() {
-        navigate('/app');
+        window.location.href = `${BASE_BACKEND_URL}/auth/login`;
     }
+    
     return (
        <Box
         sx={{

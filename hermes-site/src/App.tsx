@@ -6,6 +6,10 @@ import Contacts from './pages/Contacts';
 import Login from './pages/Login';
 import Tasks from './pages/Tasks';
 import Users from './pages/Users';
+import { validateEnv } from './config';
+
+// Validate environment variables on startup
+validateEnv();
 
 const theme = createTheme({ 
   typography: {
