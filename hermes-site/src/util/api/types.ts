@@ -34,3 +34,32 @@ export type Sponsor = {
     status: SponsorStatus;
     updated_at: string | null;
 }
+
+type UserRole = "LEAD" | "MEMBER";
+
+export type Profile = {
+    created_at: string | null;
+    gmail_refresh: string | null;
+    gmail_token: string | null;
+    id: string;
+    last_history_id: string | null;
+    last_synced_at: string | null;
+    name: string;
+    role: UserRole;
+    updated_at: string | null;
+}
+
+export type TaskStatus = "PENDING" | "SENT" | "FOLLOWED_UP" | "COMPLETED" | "REPLIED";
+
+export interface TaskInsert {
+  sponsor_email: string;
+  owner_id: string;
+  due_date: string; // unix ms timestamp as string
+  notes?: string;
+  status?: TaskStatus;
+}
+
+export type CreateTaskResponse = {
+  message: string;
+  task_id: number;
+};
