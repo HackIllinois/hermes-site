@@ -1,13 +1,14 @@
 // src/App.tsx
 import { ThemeProvider, createTheme } from '@mui/material';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
+import ProtectedRoute from './components/ProtectedRoute';
+import { validateEnv } from './config';
 import AppLayout from './pages/AppLayout';
-import Contacts from './pages/Contacts';
 import Login from './pages/Login';
+import Sponsors from './pages/Sponsors';
 import Tasks from './pages/Tasks';
 import Users from './pages/Users';
-import { validateEnv } from './config';
-import ProtectedRoute from './components/ProtectedRoute';
+import { PageNotFound } from './pages/PageNotFound';
 
 // Validate environment variables on startup
 validateEnv();
@@ -31,11 +32,11 @@ function App() {
             <Route path="/app" element={<AppLayout />}>
                 <Route index element={<Navigate to="tasks" replace />} />
                 <Route path="tasks" element={<Tasks />} />
-                <Route path="contacts" element={<Contacts />} />
+                <Route path="sponsors" element={<Sponsors />} />
                 <Route path="users" element={<Users />} />
             </Route>
           </Route>
-          
+          <Route path="*" element={<PageNotFound />} />
         </Routes>
       </BrowserRouter>
     </ThemeProvider>
