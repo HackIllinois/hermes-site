@@ -67,7 +67,7 @@ export const AddEditSponsor =({ open, initial, onClose, onSubmit }: SponsorFormD
             helperText={
               form.sponsor_email.length > 0 && !isValidEmail(form.sponsor_email)
                 ? 'Enter a valid email'
-                : ' '
+                : undefined
             }
             disabled={editing} 
           />
