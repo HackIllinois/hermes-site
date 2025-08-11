@@ -19,8 +19,8 @@ const drawerWidth = 240;
 
 export default function AppLayout() {
   const { pathname } = useLocation();
-  const selected = useMemo<'tasks' | 'contacts' | 'users'>(() => {
-    if (pathname.endsWith('/contacts')) return 'contacts';
+  const selected = useMemo<'tasks' | 'sponsors' | 'users'>(() => {
+    if (pathname.endsWith('/sponsors')) return 'sponsors';
     if (pathname.endsWith('/users')) return 'users';
     return 'tasks';
   }, [pathname]);
@@ -74,13 +74,13 @@ export default function AppLayout() {
 
           <ListItemButton
             component={Link}
-            to="contacts"
-            selected={selected === 'contacts'}
+            to="sponsors"
+            selected={selected === 'sponsors'}
           >
             <ListItemIcon sx={{ minWidth: 40 }}>
               <ContactsIcon />
             </ListItemIcon>
-            <ListItemText primary="Contacts" />
+            <ListItemText primary="Sponsors" />
           </ListItemButton>
 
           <ListItemButton
