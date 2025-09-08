@@ -4,18 +4,16 @@ import {
   Box,
   Button,
   CircularProgress,
-  IconButton,
-  Link,
   Modal,
   TextField,
   Typography,
   Stack,
 } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import type { Task } from '../types/tasks';
-import { BASE_BACKEND_URL } from '../config';
-import Autocomplete from '@mui/material/Autocomplete';
-import Chip from '@mui/material/Chip';
+import { isValidEmail } from '../util/helpers/validate-email';
+import { normalizeEmails } from '../util/helpers/normalize-emails';
+import { SendEmailsInput } from '../components/emails/SendEmailsInput';
+import { sendEmail } from '../util/api/emails';
+import type { Task } from '../util/api/types';
 
 interface EmailFormData {
   subject: string;
@@ -44,161 +42,6 @@ const modalStyle = {
   gap: 2,
 };
 
-const emailRegex =
-  // lightweight but practical email validation
-  /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
-
-function normalizeEmails(list: string[]) {
-  // trim, lowercase, dedupe
-  const norm = list
-    .map((e) => e.trim())
-    .filter(Boolean)
-    .map((e) => e.toLowerCase());
-  return Array.from(new Set(norm));
-}
-
-function splitCandidate(input: string): string[] {
-  // allow typing multiple separated by , ; space or newline
-  return input
-    .split(/[\s,;]+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-type EmailsInputProps = {
-  label: string;
-  values: string[];
-  onChange: (next: string[]) => void;
-  placeholder?: string;
-  autoFocus?: boolean;
-  hidden?: boolean;
-  setHidden?: (v: boolean) => void;
-};
-
-/**
- * Gmail-like chips input using MUI Autocomplete (multiple + freeSolo),
- * with a "+" button to formalize current input.
- */
-function EmailsInput({
-  label,
-  values,
-  onChange,
-  placeholder,
-  autoFocus,
-  hidden,
-  setHidden,
-}: EmailsInputProps) {
-  const [inputValue, setInputValue] = useState('');
-  const [fieldError, setFieldError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (hidden) {
-      // reset any transient UI state when a field is hidden
-      setInputValue('');
-      setFieldError(null);
-    }
-  }, [hidden]);
-
-  const commit = () => {
-    if (!inputValue.trim()) return;
-    const candidates = splitCandidate(inputValue);
-    const invalid = candidates.filter((c) => !emailRegex.test(c));
-    if (invalid.length) {
-      setFieldError(`Invalid email${invalid.length > 1 ? 's' : ''}: ${invalid.join(', ')}`);
-      return;
-    }
-    const next = normalizeEmails([...values, ...candidates]);
-    onChange(next);
-    setInputValue('');
-    setFieldError(null);
-  };
-
-  const removeAt = (idx: number) => {
-    const next = values.slice();
-    next.splice(idx, 1);
-    onChange(next);
-  };
-
-  if (hidden) {
-    return (
-      <Stack direction="row" spacing={1} alignItems="center">
-        <Typography variant="body2">{label}:</Typography>
-        <Link component="button" type="button" onClick={() => setHidden && setHidden(false)}>
-          Add {label}
-        </Link>
-      </Stack>
-    );
-  }
-
-  return (
-    <Autocomplete
-      multiple
-      freeSolo
-      options={[]}
-      value={values}
-      inputValue={inputValue}
-      onInputChange={(_, v) => setInputValue(v)}
-      onChange={(_, newValues) => {
-        // User can paste/press enter to add; validate added tokens
-        // Filter out non-emails (we only accept emails)
-        const valid = newValues.filter((v) => emailRegex.test(v));
-        const next = normalizeEmails(valid);
-        onChange(next);
-        setFieldError(null);
-      }}
-      filterOptions={(x) => x} // keep exactly what user typed
-      renderTags={(tagValue, getTagProps) =>
-        tagValue.map((option, index) => (
-          <Chip
-            {...getTagProps({ index })}
-            key={`${option}-${index}`}
-            label={option}
-            onDelete={() => removeAt(index)}
-            size="small"
-            variant="outlined"
-          />
-        ))
-      }
-      renderInput={(params) => (
-        <TextField
-          {...params}
-          label={label}
-          placeholder={placeholder}
-          autoFocus={autoFocus}
-          error={!!fieldError}
-          helperText={fieldError ?? ' '}
-          InputProps={{
-            ...params.InputProps,
-            endAdornment: (
-              <>
-                <IconButton
-                  aria-label={`Add ${label}`}
-                  edge="end"
-                  size="small"
-                  onClick={commit}
-                  sx={{ mr: 0.5 }}
-                >
-                  <AddIcon fontSize="small" />
-                </IconButton>
-                {params.InputProps.endAdornment}
-              </>
-            ),
-          }}
-          onKeyDown={(e) => {
-            if (
-              (e.key === 'Enter' || e.key === ',' || e.key === ';' || e.key === ' ') &&
-              inputValue.trim()
-            ) {
-              e.preventDefault();
-              commit();
-            }
-          }}
-        />
-      )}
-    />
-  );
-}
-
 export default function SendEmailModal({ task, open, onClose, onEmailSent }: SendEmailModalProps) {
   const [formData, setFormData] = useState<EmailFormData>({ subject: '', body: '' });
   const [isSending, setIsSending] = useState(false);
@@ -225,9 +68,9 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
       formData.subject.trim().length > 0 &&
       formData.body.trim().length > 0 &&
       to.length > 0 &&
-      to.every((e) => emailRegex.test(e)) &&
-      cc.every((e) => emailRegex.test(e)) &&
-      bcc.every((e) => emailRegex.test(e))
+      to.every((e) => isValidEmail(e)) &&
+      cc.every((e) => isValidEmail(e)) &&
+      bcc.every((e) => isValidEmail(e))
     );
   }, [formData, to, cc, bcc]);
 
@@ -240,24 +83,17 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
     setError(null);
 
     try {
-      const response = await fetch(`${BASE_BACKEND_URL}/emails/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          contact_task_id: task.id,
-          subject: formData.subject.trim(),
-          body: formData.body,
-          // NEW: send recipients; backend should accept `to?: string[]`, `cc?: string[]`, `bcc?: string[]`
-          to,
-          cc,
-          bcc,
-        }),
+      const response = await sendEmail({
+        contact_task_id: task.id,
+        subject: formData.subject,
+        body: formData.body,
+        to_recipients: to,
+        cc_recipients: cc,
+        bcc_recipients: bcc,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to send email.');
+      
+      if (response.response_status !== 200) {
+        throw new Error(response.message);
       }
 
       onEmailSent();
@@ -285,7 +121,7 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
 
         {/* Recipients */}
         <Stack spacing={1}>
-          <EmailsInput
+          <SendEmailsInput
             label="To"
             values={to}
             onChange={setTo}
@@ -293,7 +129,7 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
             autoFocus
           />
           <Stack direction="row" spacing={2} alignItems="center">
-            <EmailsInput
+            <SendEmailsInput
               label="Cc"
               values={cc}
               onChange={setCc}
@@ -301,7 +137,7 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
               setHidden={setHideCc}
               placeholder="Add Cc and press Enter or +"
             />
-            <EmailsInput
+            <SendEmailsInput
               label="Bcc"
               values={bcc}
               onChange={setBcc}
@@ -342,7 +178,7 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
         </Box>
 
         <Typography variant="caption" color="text.secondary">
-          Tip: Type an email and hit <b>Enter</b>, <b>comma</b>, <b>semicolon</b>, or click <b>+</b> to add it as a chip.
+            Tip: Type a recipient's email and add it by clicking <b>Enter</b>, <b>comma</b>, <b>semicolon</b>, or click <b>+</b>.
         </Typography>
       </Box>
     </Modal>

@@ -1,9 +1,9 @@
-import { Box, Button, Card, CardContent, CircularProgress, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
+import { Box, Button, Card, CardContent, CircularProgress, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
-import type { Task } from '../types/tasks';
-import { BASE_BACKEND_URL } from '../config';
+import type { Task } from '../util/api/types';
 import TaskDetailModal from './TaskDetailModal';
 import SendEmailModal from './SendEmailModal';
+import { getTasks } from '../util/api/tasks';
 
 export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -19,11 +19,7 @@ export default function Tasks() {
   const fetchTasks = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${BASE_BACKEND_URL}/tasks`, {
-        credentials: 'include',
-      });
-      if (!response.ok) throw new Error('Failed to fetch tasks');
-      const data: Task[] = await response.json();
+      const data = await getTasks();           // ✅ centralized client
       setTasks(data);
     } catch (err) {
       setError((err as Error).message);
@@ -85,7 +81,8 @@ export default function Tasks() {
                   <TableCell>Status</TableCell>
                   <TableCell>Due Date</TableCell>
                   <TableCell>Notes</TableCell>
-                  <TableCell align="right">Actions</TableCell>
+                  {/* ✅ Right align + fixed width to match body cells */}
+                  <TableCell align="right" sx={{ width: 240 }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -95,16 +92,18 @@ export default function Tasks() {
                     <TableCell>{task.status}</TableCell>
                     <TableCell>{new Date(task.due_date).toLocaleDateString()}</TableCell>
                     <TableCell>{task.notes}</TableCell>
-                    <TableCell align="right" sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                      {/* ✨ Conditionally render the "Send Email" button */}
-                      {task.status === 'PENDING' && (
-                        <Button variant="contained" size="small" onClick={() => handleOpenSendEmailModal(task)}>
-                          Send Email
+                    {/* ✅ Match header: right aligned cell + Stack for layout */}
+                    <TableCell align="right" sx={{ width: 240 }}>
+                      <Stack direction="row" spacing={1} justifyContent="flex-end">
+                        {task.status === 'PENDING' && (
+                          <Button variant="contained" size="small" onClick={() => handleOpenSendEmailModal(task)}>
+                            Send Email
+                          </Button>
+                        )}
+                        <Button variant="outlined" size="small" onClick={() => handleOpenModal(task)}>
+                          View Emails
                         </Button>
-                      )}
-                      <Button variant="outlined" size="small" onClick={() => handleOpenModal(task)}>
-                        View Emails
-                      </Button>
+                      </Stack>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -114,7 +113,7 @@ export default function Tasks() {
         </CardContent>
       </Card>
 
-      {/* The "View Emails" Modal */}
+      {/* modals unchanged except props */}
       {selectedTask && (
         <TaskDetailModal
           task={selectedTask}
@@ -122,15 +121,13 @@ export default function Tasks() {
           onClose={handleCloseModal}
         />
       )}
-
-      {/* ✨ The new "Send Email" Modal */}
       {taskToSendEmailFor && (
-          <SendEmailModal
-            task={taskToSendEmailFor}
-            open={!!taskToSendEmailFor}
-            onClose={handleCloseSendEmailModal}
-            onEmailSent={handleRefreshTasks} // Pass the refresh function
-          />
+        <SendEmailModal
+          task={taskToSendEmailFor}
+          open={!!taskToSendEmailFor}
+          onClose={handleCloseSendEmailModal}
+          onEmailSent={handleRefreshTasks}
+        />
       )}
     </>
   );
