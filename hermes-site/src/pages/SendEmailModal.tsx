@@ -14,6 +14,7 @@ import { normalizeEmails } from '../util/helpers/normalize-emails';
 import { SendEmailsInput } from '../components/emails/SendEmailsInput';
 import { sendEmail } from '../util/api/emails';
 import type { Task } from '../util/api/types';
+import { DEFAULT_CONTACT_EMAIL } from '../config';
 
 interface EmailFormData {
   subject: string;
@@ -58,8 +59,17 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
 
   // Prefill sponsor in To when modal opens or task changes
   useEffect(() => {
-    if (open && task?.sponsor_email) {
-      setTo((prev) => (prev.length ? prev : normalizeEmails([task.sponsor_email])));
+    if (open) {
+      // Prefill 'To' field if it's empty
+      if (task?.sponsor_email) {
+        setTo((prev) => (prev.length ? prev : normalizeEmails([task.sponsor_email])));
+      }
+      
+      // ✨ 2. Prefill 'Cc' field if it's empty
+      setCc((prev) => (prev.length ? prev : normalizeEmails([DEFAULT_CONTACT_EMAIL])));
+      
+      // ✨ 3. Automatically show the Cc field
+      setHideCc(false);
     }
   }, [open, task]);
 
