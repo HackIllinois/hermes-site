@@ -18,9 +18,10 @@ export const AddEditSponsor =({ open, initial, onClose, onSubmit }: SponsorFormD
     sponsor_email: initial?.sponsor_email ?? '',
     sponsor_name: initial?.sponsor_name ?? '',
     notes: initial?.notes ?? '',
-    status: (initial?.status as SponsorStatus) ?? 'PENDING_EMAIL',
+    status: (initial?.status as SponsorStatus) ?? 'NOT_CONTACTED',
     created_at: initial?.created_at ?? new Date().toISOString(),
     updated_at: new Date().toISOString(),
+    contact_tasks: initial?.contact_tasks ?? [],
   });
 
   useEffect(() => {
@@ -30,9 +31,10 @@ export const AddEditSponsor =({ open, initial, onClose, onSubmit }: SponsorFormD
         sponsor_email: initial?.sponsor_email ?? '',
         sponsor_name: initial?.sponsor_name ?? '',
         notes: initial?.notes ?? '',
-        status: (initial?.status as SponsorStatus) ?? 'PENDING_EMAIL',
+        status: (initial?.status as SponsorStatus) ?? 'NOT_CONTACTED',
         created_at: initial?.created_at ?? new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        contact_tasks: initial?.contact_tasks ?? []
       });
     }
   }, [open, initial]);
@@ -44,6 +46,15 @@ export const AddEditSponsor =({ open, initial, onClose, onSubmit }: SponsorFormD
 
   const handleChange = (k: keyof Sponsor) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((f) => ({ ...f, [k]: e.target.value }));
+  };
+
+  const handleSubmit = () => {
+    // we don't actually send contact_tasks to the backend, so we need to remove it from the form
+    const { contact_tasks, ...dataToSend } = form;
+    onSubmit({
+      ...dataToSend,
+      updated_at: new Date().toISOString(),
+    } as Sponsor);
   };
 
   return (
@@ -95,7 +106,7 @@ export const AddEditSponsor =({ open, initial, onClose, onSubmit }: SponsorFormD
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={() => onSubmit({ ...form, updated_at: new Date().toISOString() })} disabled={!canSubmit}>
+        <Button onClick={handleSubmit} disabled={!canSubmit}>
           {editing ? 'Save' : 'Create'}
         </Button>
       </DialogActions>

@@ -7,7 +7,7 @@ export const getEmails = async (taskId: number): Promise<Email[]> => {
 }
 
 export const sendEmail = async (payload: SendEmail): Promise<SendEmailResponse> => {
-    const { data, status } = await api.post<SendEmailResponse>("/tasks", payload);
+    const { data, status } = await api.post<SendEmailResponse>("/emails/send", payload);
     data.response_status = status;
     return data;
 };

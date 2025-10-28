@@ -1,4 +1,4 @@
-import { Add, Delete, Edit, Refresh } from '@mui/icons-material';
+import { Add, AssignmentInd, Delete, Edit, Refresh } from '@mui/icons-material';
 import {
   Box,
   Button,
@@ -23,7 +23,9 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import { AddEditSponsor } from '../components/Sponsors/AddEditSponsor';
 import { createSponsor, deleteSponsor, getSponsors, updateSponsor } from '../util/api/sponsors';
-import { SPONSOR_STATUS_COLORS, SPONSOR_STATUS_DISPLAY_NAMES, SPONSOR_STATUSES, type Sponsor, type SponsorStatus } from '../util/api/types';
+import { SPONSOR_STATUS_COLORS, SPONSOR_STATUS_DISPLAY_NAMES, SPONSOR_STATUSES, type Sponsor, type SponsorStatus, type Task } from '../util/api/types';
+import { createTask } from '../util/api/tasks';
+import { AddEditTask } from '../components/tasks/AddEditTask';
 
 export default function SponsorsPage() {
   const [rows, setRows] = useState<Sponsor[]>([]);
@@ -37,6 +39,8 @@ export default function SponsorsPage() {
   const [editRow, setEditRow] = useState<Sponsor | null>(null);
 
   const [snack, setSnack] = useState<string | null>(null);
+
+  const [sponsorForNewTask, setSponsorForNewTask] = useState<Sponsor | null>(null);
 
   async function refresh() {
     try {
@@ -84,6 +88,24 @@ export default function SponsorsPage() {
         setSnack(e.message);
       } else {
         setSnack('Create failed');
+      }
+    }
+  }
+
+  async function handleCreateTask(data: Partial<Task>) {
+    try {
+      await createTask(data);
+      setSnack('Task created successfully');
+      setSponsorForNewTask(null); // Close the modal
+      
+      // Optionally refresh the sponsor list if creating a task
+      // changes the sponsor's status (e.g., from PENDING_EMAIL)
+      await refresh(); 
+    } catch (e) {
+      if (e instanceof Error) {
+        setSnack(e.message);
+      } else {
+        setSnack('Task creation failed');
       }
     }
   }
@@ -138,7 +160,7 @@ export default function SponsorsPage() {
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={2}>
           <TextField
             label="Search"
-            placeholder="name, email, company, notes"
+            placeholder="name, email, company, owners, notes"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             fullWidth
@@ -168,55 +190,85 @@ export default function SponsorsPage() {
             <Typography color="error">{error}</Typography>
           </Box>
         ) : (
-          <TableContainer sx={{ borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
-            <Table size="small">
+
+          <TableContainer sx={{ borderRadius: 1, border: '1px solid', borderColor: 'divider', overflowX: 'auto' }}>
+            <Table size="small" sx={{ minWidth: 900 }}>
               <TableHead>
                 <TableRow>
                   <TableCell>Name</TableCell>
                   <TableCell>Email</TableCell>
                   <TableCell>Company</TableCell>
                   <TableCell>Status</TableCell>
+                  <TableCell>Task Owners</TableCell> {/* ✨ New Column */}
                   <TableCell>Notes</TableCell>
                   <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filtered.map((r) => (
-                  <TableRow key={r.sponsor_email} hover>
-                    <TableCell>{r.sponsor_name}</TableCell>
-                    <TableCell>
-                      <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
-                        {r.sponsor_email}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>{r.company_name}</TableCell>
-                    <TableCell>
-                      <Chip size="small" label={SPONSOR_STATUS_DISPLAY_NAMES[r.status]} color={SPONSOR_STATUS_COLORS[r.status] || 'default'} />
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" noWrap title={r.notes ?? ''}>
-                        {r.notes || "-"}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Stack direction="row" spacing={1} justifyContent="flex-end">
-                        <Tooltip title="Edit">
-                          <IconButton onClick={() => setEditRow(r)}>
-                            <Edit />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete">
-                          <IconButton onClick={() => handleDelete(r.sponsor_email)}>
-                            <Delete />
-                          </IconButton>
-                        </Tooltip>
-                      </Stack>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {filtered.map((r) => {
+                  // ✨ Get unique owner names
+                  const ownerNames = r.contact_tasks.map(t => t.profiles?.name || 'Unassigned');
+                  const uniqueOwnerNames = [...new Set(ownerNames)];
+
+                  return (
+                    <TableRow key={r.sponsor_email} hover>
+                      <TableCell>{r.sponsor_name}</TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+                          {r.sponsor_email}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>{r.company_name}</TableCell>
+                      <TableCell>
+                        <Chip size="small" label={SPONSOR_STATUS_DISPLAY_NAMES[r.status]} color={SPONSOR_STATUS_COLORS[r.status] || 'default'} />
+                      </TableCell>
+                      
+                      <TableCell>
+                        {uniqueOwnerNames.length > 0
+                          ? (
+                            uniqueOwnerNames.map((name, index) => (
+                              <Typography key={index} variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+                                {name}
+                              </Typography>
+                            ))
+                          )
+                          : (
+                            <Typography variant="body2" color="text.secondary">-</Typography>
+                          )
+                        }
+                      </TableCell>
+
+                      <TableCell>
+                        <Typography variant="body2" noWrap title={r.notes ?? ''}>
+                          {r.notes || "-"}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Stack direction="row" spacing={1} justifyContent="flex-end">
+                          <Tooltip title="Create Task for Sponsor">
+                            <IconButton onClick={() => setSponsorForNewTask(r)}>
+                              <AssignmentInd />
+                            </IconButton>
+                          </Tooltip>
+
+                          <Tooltip title="Edit">
+                            <IconButton onClick={() => setEditRow(r)}>
+                              <Edit />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete">
+                            <IconButton onClick={() => handleDelete(r.sponsor_email)}>
+                              <Delete />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
                 {filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6}>
+                    <TableCell colSpan={7}>
                       <Box py={4} textAlign="center">
                         <Typography color="text.secondary">No sponsors found.</Typography>
                       </Box>
@@ -242,6 +294,13 @@ export default function SponsorsPage() {
           initial={editRow}
           onClose={() => setEditRow(null)}
           onSubmit={handleUpdate}
+        />
+
+        <AddEditTask
+            open={Boolean(sponsorForNewTask)}
+            initial={{ sponsor_email: sponsorForNewTask?.sponsor_email }}
+            onClose={() => setSponsorForNewTask(null)}
+            onSubmit={handleCreateTask}
         />
 
         <Snackbar

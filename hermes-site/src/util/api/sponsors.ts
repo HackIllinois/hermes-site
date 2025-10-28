@@ -22,8 +22,9 @@ export const updateSponsor = async (sponsor_email: string, payload: Partial<Spon
     notes: '',
     sponsor_email: sponsor_email,
     sponsor_name: '',
-    status: 'PENDING_EMAIL',
+    status: 'NOT_CONTACTED',
     updated_at: '',
+    contact_tasks: [],
   };
 }
 
