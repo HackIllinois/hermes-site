@@ -87,9 +87,9 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
         contact_task_id: task.id,
         subject: formData.subject,
         body: formData.body,
-        to_recipients: to,
-        cc_recipients: cc,
-        bcc_recipients: bcc,
+        to: to,
+        cc: cc,
+        bcc: bcc,
       });
       
       if (response.response_status !== 200) {
@@ -112,6 +112,8 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
     }
   };
 
+  const showLinksOnly = hideCc && hideBcc;
+
   return (
     <Modal open={open} onClose={onClose}>
       <Box sx={modalStyle}>
@@ -128,7 +130,10 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
             placeholder="Add recipients and press Enter or +"
             autoFocus
           />
-          <Stack direction="row" spacing={2} alignItems="center">
+          <Stack 
+            direction={showLinksOnly ? "row" : "column"} 
+            spacing={showLinksOnly ? 2 : 1}
+          >
             <SendEmailsInput
               label="Cc"
               values={cc}

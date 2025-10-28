@@ -8,6 +8,7 @@ import type { Email } from '../util/api/types';
 import { BASE_BACKEND_URL } from '../config';
 import { ReplyEmailsInput } from '../components/emails/ReplyEmailsInput';
 import { makeReplyQuotePlain } from '../util/helpers/make-reply-quotes-plain';
+import { normalizeEmails } from '../util/helpers/normalize-emails';
 
 interface ReplyEmailModalProps {
   emailToReplyTo: Email;
@@ -58,6 +59,34 @@ export default function ReplyEmailModal({ emailToReplyTo, open, onClose, onEmail
       setError(null);
     }
   }, [emailToReplyTo]);
+
+  useEffect(() => {
+    if (!open || !emailToReplyTo) return; // Don't run if modal is closed
+
+    if (replyType === 'REPLY_ALL') {
+      // User selected "Reply All"
+      const originalTo = emailToReplyTo.to_recipients || [];
+      const originalCc = emailToReplyTo.cc_recipients || [];
+      const originalSender = emailToReplyTo.sender_email;
+
+      // Combine all original recipients
+      const allRecipients = [...originalTo, ...originalCc];
+      
+      // Filter out the original sender (who is already in the "To" field)
+      // The backend will handle filtering out the user's *own* email
+      const ccRecipients = allRecipients.filter(
+        email => email.toLowerCase() !== originalSender.toLowerCase()
+      );
+      
+      // Set the CC field, removing duplicates
+      setCc(normalizeEmails(ccRecipients));
+    } else {
+      // User selected "Reply"
+      // Clear the CC field
+      setCc([]);
+    }
+    // This effect runs when the user *changes* the replyType
+  }, [replyType, open, emailToReplyTo]);
 
   const handleSendReply = async () => {
     setIsSending(true);

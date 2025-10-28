@@ -54,7 +54,7 @@ export function SendEmailsInput({
       return (
         <Stack direction="row" spacing={1} alignItems="center">
           <Typography variant="body2">{label}:</Typography>
-          <Link component="button" type="button" onClick={() => setHidden && setHidden(false)}>
+          <Link component="button" type="button" variant="body2" onClick={() => setHidden && setHidden(false)}>
             Add {label}
           </Link>
         </Stack>
