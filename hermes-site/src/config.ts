@@ -23,7 +23,7 @@ export const BASE_FRONTEND_URL = config.ENVIRONMENT === "DEV"
 
 export const BASE_BACKEND_URL = config.ENVIRONMENT === "DEV" 
     ? "http://localhost:5555/api" 
-    : "https://hermes.hackillinois.org/api";
+    : "https://hermes-api.hackillinois.org/api";
 
 export const DEFAULT_CONTACT_EMAIL = config.DEFAULT_CONTACT_EMAIL;
 
