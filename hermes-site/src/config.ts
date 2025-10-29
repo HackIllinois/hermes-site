@@ -14,6 +14,8 @@ export const validateEnv = (): void => {
             throw new Error(`Missing required environment variable: ${envVar}`);
         }
     }
+
+    console.log("ENVIRONMENT", config.ENVIRONMENT);
 };
 
 // Base URLs for different environments
