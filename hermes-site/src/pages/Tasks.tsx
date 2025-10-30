@@ -1,9 +1,11 @@
-import { Box, Button, Card, CardContent, CircularProgress, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
+import { Box, Button, Card, CardContent, CircularProgress, Divider, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
-import type { Task } from '../util/api/types';
+import type { Task, TaskStatus, UserProfile } from '../util/api/types';
 import TaskDetailModal from './TaskDetailModal';
 import SendEmailModal from './SendEmailModal';
-import { getTasks } from '../util/api/tasks';
+import { getTasks, updateTaskStatus } from '../util/api/tasks';
+import { getUsers } from '../util/api/profiles';
+import { TASK_STATUSES, TASK_STATUS_DISPLAY_NAMES } from '../util/api/types';
 
 export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -16,21 +18,67 @@ export default function Tasks() {
   // ✨ State for the new "Send Email" modal
   const [taskToSendEmailFor, setTaskToSendEmailFor] = useState<Task | null>(null);
 
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [ownerFilter, setOwnerFilter] = useState<string>("me");
+
   const fetchTasks = async () => {
     setLoading(true);
     try {
-      const data = await getTasks();           // ✅ centralized client
-      setTasks(data);
+        const apiOwnerParam = ownerFilter === 'me' ? undefined : ownerFilter;
+        const data = await getTasks(apiOwnerParam);
+        setTasks(data);
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setLoading(false);
     }
   };
+
+  const fetchUsers = async () => {
+    try {
+      const data = await getUsers();
+      setUsers(data);
+    } catch (err) {
+      console.error("Failed to fetch users:", err);
+    }
+  };
+
+  const handleStatusChange = async (taskId: number, newStatus: TaskStatus) => {
+    const originalTasks = [...tasks]; // Save original state for revert
+
+    // Optimistic update: Show the change immediately in the UI
+    setTasks(prevTasks => 
+        prevTasks.map(t => 
+            t.id === taskId ? { ...t, status: newStatus } : t
+        )
+    );
+
+    try {
+        // Call the new API function
+        const updatedTask = await updateTaskStatus(taskId, newStatus);
+        
+        // On success, update the local state with the actual data from the server
+        // (This includes any backend changes like `updated_at`)
+        setTasks(prevTasks => 
+            prevTasks.map(t => 
+                t.id === taskId ? updatedTask : t
+            )
+        );
+    } catch (err) {
+        console.error("Failed to update task status:", err);
+        setError(`Failed to update status for task ${taskId}. Please try again.`);
+        // On failure, revert to the original state
+        setTasks(originalTasks);
+    }
+  };
   
   useEffect(() => {
-    fetchTasks();
+    fetchUsers();
   }, []);
+
+  useEffect(() => {
+    fetchTasks();
+  }, [ownerFilter]);
 
   const handleOpenModal = (task: Task) => {
     setSelectedTask(task);
@@ -70,9 +118,31 @@ export default function Tasks() {
     <>
       <Card sx={{ boxShadow: 2, borderRadius: 2, p: 2 }}>
         <CardContent>
-          <Typography variant="h4" gutterBottom>
-            Tasks
-          </Typography>
+
+          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+            <Typography variant="h4" gutterBottom>
+              Tasks
+            </Typography>
+            <TextField
+                select
+                label="View Tasks For"
+                value={ownerFilter}
+                onChange={(e) => setOwnerFilter(e.target.value)}
+                sx={{ minWidth: 200 }}
+                size="small"
+              >
+                <MenuItem value="me">My Tasks</MenuItem>
+                <MenuItem value="all">All Tasks</MenuItem>
+                {/* Divider can be nice here */}
+                <Divider sx={{ my: 0.5 }} /> 
+                {users.map((user) => (
+                  <MenuItem key={user.id} value={user.id}>
+                    {user.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+          </Stack>
+
           <TableContainer component={Paper}>
             <Table sx={{ minWidth: 650 }} aria-label="tasks table">
               <TableHead>
@@ -89,13 +159,35 @@ export default function Tasks() {
                 {tasks.map((task) => (
                   <TableRow key={task.id}>
                     <TableCell component="th" scope="row">{task.sponsor_email}</TableCell>
-                    <TableCell>{task.status}</TableCell>
+                    <TableCell>
+                      <TextField
+                        select
+                        value={task.status}
+                        onChange={(e) => handleStatusChange(task.id, e.target.value as TaskStatus)}
+                        size="small"
+                        sx={{ minWidth: 150 }}
+                        // Prevent the dropdown from changing status for "PENDING_EMAIL"
+                        // as that should only be changed by sending the email.
+                        disabled={task.status === "PENDING_EMAIL"}
+                      >
+                        {TASK_STATUSES.map((status: TaskStatus) => (
+                          <MenuItem 
+                            key={status} 
+                            value={status}
+                            // Don't allow manually selecting PENDING_EMAIL
+                            disabled={status === "PENDING_EMAIL"}
+                          >
+                            {TASK_STATUS_DISPLAY_NAMES[status]}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </TableCell>
                     <TableCell>{new Date(task.due_date).toLocaleDateString()}</TableCell>
                     <TableCell>{task.notes}</TableCell>
                     {/* ✅ Match header: right aligned cell + Stack for layout */}
                     <TableCell align="right" sx={{ width: 240 }}>
                       <Stack direction="row" spacing={1} justifyContent="flex-end">
-                        {task.status === 'PENDING' && (
+                        {task.status === "PENDING_EMAIL" && (
                           <Button variant="contained" size="small" onClick={() => handleOpenSendEmailModal(task)}>
                             Send Email
                           </Button>

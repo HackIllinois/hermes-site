@@ -5,9 +5,10 @@ import {
   RadioGroup, FormControlLabel, Radio, FormControl
 } from '@mui/material';
 import type { Email } from '../util/api/types';
-import { BASE_BACKEND_URL } from '../config';
+import { BASE_BACKEND_URL, DEFAULT_CONTACT_EMAIL } from '../config';
 import { ReplyEmailsInput } from '../components/emails/ReplyEmailsInput';
 import { makeReplyQuotePlain } from '../util/helpers/make-reply-quotes-plain';
+import { normalizeEmails } from '../util/helpers/normalize-emails';
 
 interface ReplyEmailModalProps {
   emailToReplyTo: Email;
@@ -35,7 +36,7 @@ const modalStyle = {
 
 export default function ReplyEmailModal({ emailToReplyTo, open, onClose, onEmailSent }: ReplyEmailModalProps) {
   const [body, setBody] = useState('');
-  const [replyType, setReplyType] = useState<'REPLY' | 'REPLY_ALL'>('REPLY');
+  const [replyType, setReplyType] = useState<'REPLY' | 'REPLY_ALL'>('REPLY_ALL');
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,10 +55,39 @@ export default function ReplyEmailModal({ emailToReplyTo, open, onClose, onEmail
       setBody(`\n\n${quotedBody}`);
       setCc([]);   // reset on open
       setBcc([]);  // reset on open
-      setReplyType('REPLY');
+      setReplyType('REPLY_ALL');
       setError(null);
     }
   }, [emailToReplyTo]);
+
+  useEffect(() => {
+    if (!open || !emailToReplyTo) return; // Don't run if modal is closed
+
+    // Start with our constant email
+    let baseCcList: string[] = [DEFAULT_CONTACT_EMAIL];
+
+    if (replyType === 'REPLY_ALL') {
+      // User selected "Reply All"
+      const originalTo = emailToReplyTo.to_recipients || [];
+      const originalCc = emailToReplyTo.cc_recipients || [];
+      const originalSender = emailToReplyTo.sender_email;
+
+      // Combine all original recipients
+      const allRecipients = [...originalTo, ...originalCc];
+      
+      // Filter out the original sender (who is already in the "To" field)
+      const replyAllRecipients = allRecipients.filter(
+        email => email.toLowerCase() !== originalSender.toLowerCase()
+      );
+      
+      // Add them to our base list
+      baseCcList = baseCcList.concat(replyAllRecipients);
+    }
+    
+    // Set the CC field, removing duplicates
+    setCc(normalizeEmails(baseCcList));
+
+  }, [replyType, open, emailToReplyTo]);
 
   const handleSendReply = async () => {
     setIsSending(true);

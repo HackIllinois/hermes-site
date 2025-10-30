@@ -14,9 +14,9 @@ export interface SendEmail {
     contact_task_id: number;
     subject: string;
     body: string;
-    to_recipients: string[];
-    cc_recipients: string[] | null;
-    bcc_recipients: string[] | null;
+    to: string[];
+    cc: string[] | null;
+    bcc: string[] | null;
 }
 
 export interface SendEmailResponse {
@@ -28,44 +28,44 @@ export interface SendEmailResponse {
     response_status: number;
 }
 
-
 export interface Task {
     id: number;
     sponsor_email: string;
     owner_id: string;
     due_date: string;
     notes: string;
-    status: 'PENDING' | 'SENT' | 'FOLLOWED_UP' | 'COMPLETED' | 'REPLIED' | 'BUMP_1' | 'BUMP_2' | 'BUMP_3';
+    status: TaskStatus;
     created_at: string;
     updated_at: string;
 }
 
-export type SponsorStatus = "PENDING_EMAIL" | "CONTACTED" | "REJECTED" | "NEED_PAYMENT" | "CONFIRMED";
-export const SPONSOR_STATUSES: SponsorStatus[] = [
+export type TaskStatus = "PENDING_EMAIL" | "SENT" | "NEEDS_REPLY" | "BUMP_1" | "BUMP_2" | "BUMP_3" | "REJECTED" | "GHOSTED" | "INVALID_CONTACT" | "DEFERRED";
+export const TASK_STATUSES: TaskStatus[] = [
     "PENDING_EMAIL",
-    "CONTACTED",
+    "SENT",
+    "NEEDS_REPLY",
+    "BUMP_1",
+    "BUMP_2",
+    "BUMP_3",
     "REJECTED",
-    "NEED_PAYMENT",
-    "CONFIRMED",
+    "GHOSTED",
+    "INVALID_CONTACT",
+    "DEFERRED",
 ];
 
-export const SPONSOR_STATUS_DISPLAY_NAMES: Record<SponsorStatus, string> = {
+export const TASK_STATUS_DISPLAY_NAMES: Record<TaskStatus, string> = {
     "PENDING_EMAIL": "Pending Email",
-    "CONTACTED": "Contacted",
+    "SENT": "Sent",
+    "NEEDS_REPLY": "Needs Reply",
+    "BUMP_1": "Bump 1",
+    "BUMP_2": "Bump 2",
+    "BUMP_3": "Bump 3",
     "REJECTED": "Rejected",
-    "NEED_PAYMENT": "Need Payment",
-    "CONFIRMED": "Confirmed",
+    "GHOSTED": "Ghosted",
+    "INVALID_CONTACT": "Invalid Contact",
+    "DEFERRED": "Deferred",
 };
 
-type SponsorStatusColor = 'success' | 'warning' | 'error' | 'info' | 'default';
-
-export const SPONSOR_STATUS_COLORS: Record<SponsorStatus, SponsorStatusColor> = {
-    'CONFIRMED': 'success',
-    'NEED_PAYMENT': 'warning',
-    'REJECTED': 'error',
-    'CONTACTED': 'info',
-    'PENDING_EMAIL': 'default',
-}
 
 export type Sponsor = {
     company_name: string | null;
@@ -75,4 +75,55 @@ export type Sponsor = {
     sponsor_name: string;
     status: SponsorStatus;
     updated_at: string | null;
+    contact_tasks: SponsorTask[];
 }
+
+export type SponsorStatus = "NOT_CONTACTED" | "CONTACTED" | "REJECTED" | "NEED_PAYMENT" | "CONFIRMED" | "INVALID_CONTACT" | "DEFERRED";
+export const SPONSOR_STATUSES: SponsorStatus[] = [
+    "NOT_CONTACTED",
+    "CONTACTED",
+    "REJECTED",
+    "NEED_PAYMENT",
+    "CONFIRMED",
+    "INVALID_CONTACT",
+    "DEFERRED",
+];
+
+export const SPONSOR_STATUS_DISPLAY_NAMES: Record<SponsorStatus, string> = {
+    "NOT_CONTACTED": "Not Contacted",
+    "CONTACTED": "Contacted",
+    "REJECTED": "Rejected",
+    "NEED_PAYMENT": "Need Payment",
+    "CONFIRMED": "Confirmed",
+    "INVALID_CONTACT": "Invalid Contact",
+    "DEFERRED": "Deferred",
+};
+
+type SponsorStatusColor = 'success' | 'warning' | 'error' | 'info' | 'default';
+
+export const SPONSOR_STATUS_COLORS: Record<SponsorStatus, SponsorStatusColor> = {
+    'CONFIRMED': 'success',
+    'NEED_PAYMENT': 'warning',
+    'REJECTED': 'error',
+    'CONTACTED': 'info',
+    'NOT_CONTACTED': 'default',
+    'INVALID_CONTACT': 'error',
+    'DEFERRED': 'info',
+}
+
+type SponsorTaskOwner = {
+    id: string;
+    name: string;
+};
+
+type SponsorTask = {
+    id: number;
+    status: TaskStatus;
+    profiles: SponsorTaskOwner | null; // Will be null if task has no owner
+};
+
+export interface UserProfile {
+    id: string;
+    name: string;
+}
+

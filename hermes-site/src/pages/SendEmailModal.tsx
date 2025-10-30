@@ -14,6 +14,7 @@ import { normalizeEmails } from '../util/helpers/normalize-emails';
 import { SendEmailsInput } from '../components/emails/SendEmailsInput';
 import { sendEmail } from '../util/api/emails';
 import type { Task } from '../util/api/types';
+import { DEFAULT_CONTACT_EMAIL } from '../config';
 
 interface EmailFormData {
   subject: string;
@@ -58,8 +59,17 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
 
   // Prefill sponsor in To when modal opens or task changes
   useEffect(() => {
-    if (open && task?.sponsor_email) {
-      setTo((prev) => (prev.length ? prev : normalizeEmails([task.sponsor_email])));
+    if (open) {
+      // Prefill 'To' field if it's empty
+      if (task?.sponsor_email) {
+        setTo((prev) => (prev.length ? prev : normalizeEmails([task.sponsor_email])));
+      }
+      
+      // ✨ 2. Prefill 'Cc' field if it's empty
+      setCc((prev) => (prev.length ? prev : normalizeEmails([DEFAULT_CONTACT_EMAIL])));
+      
+      // ✨ 3. Automatically show the Cc field
+      setHideCc(false);
     }
   }, [open, task]);
 
@@ -87,9 +97,9 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
         contact_task_id: task.id,
         subject: formData.subject,
         body: formData.body,
-        to_recipients: to,
-        cc_recipients: cc,
-        bcc_recipients: bcc,
+        to: to,
+        cc: cc,
+        bcc: bcc,
       });
       
       if (response.response_status !== 200) {
@@ -112,6 +122,8 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
     }
   };
 
+  const showLinksOnly = hideCc && hideBcc;
+
   return (
     <Modal open={open} onClose={onClose}>
       <Box sx={modalStyle}>
@@ -128,7 +140,10 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
             placeholder="Add recipients and press Enter or +"
             autoFocus
           />
-          <Stack direction="row" spacing={2} alignItems="center">
+          <Stack 
+            direction={showLinksOnly ? "row" : "column"} 
+            spacing={showLinksOnly ? 2 : 1}
+          >
             <SendEmailsInput
               label="Cc"
               values={cc}
