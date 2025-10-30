@@ -11,3 +11,11 @@ export const sendEmail = async (payload: SendEmail): Promise<SendEmailResponse> 
     data.response_status = status;
     return data;
 };
+/**
+ * Calls the backend to create or renew the Gmail push notification watch.
+ * This should be called once when the app loads.
+ */
+export const watchEmailSync = async () => {
+    const { data } = await api.post('/emails/watch');
+    return data;
+};
