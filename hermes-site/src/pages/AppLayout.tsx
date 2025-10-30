@@ -12,8 +12,9 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Link, Outlet, useLocation } from 'react-router';
+import { watchEmailSync } from '../util/api/emails';
 
 const drawerWidth = 240;
 
@@ -24,6 +25,27 @@ export default function AppLayout() {
     if (pathname.endsWith('/users')) return 'users';
     return 'tasks';
   }, [pathname]);
+
+  useEffect(() => {
+    // This effect runs once when the main app layout mounts.
+    // This is the perfect time to ensure the user is subscribed
+    // to Gmail push notifications.
+    
+    const initEmailSync = async () => {
+      try {
+        // Call the /watch endpoint. The backend will handle the
+        // logic of creating or renewing the watch.
+        await watchEmailSync();
+        console.log("Email sync watch successfully initiated or renewed.");
+      } catch (err) {
+        // Don't block the user, just log the error.
+        // The daily cron job will try again later.
+        console.error("Failed to initiate email sync watch:", err);
+      }
+    };
+
+    initEmailSync();
+  }, []); // only call once when the app layout mounts
 
   return (
     <Box
