@@ -1,11 +1,89 @@
-import { Box, Button, Card, CardContent, CircularProgress, Divider, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material';
-import { useEffect, useState } from 'react';
+import { Box, Button, Card, CardContent, Chip, CircularProgress, Divider, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography, type SelectChangeEvent } from '@mui/material';
+import { useEffect, useMemo, useState } from 'react';
 import type { Task, TaskStatus, UserProfile } from '../util/api/types';
 import TaskDetailModal from './TaskDetailModal';
 import SendEmailModal from './SendEmailModal';
 import { getTasks, updateTaskStatus } from '../util/api/tasks';
 import { getUsers } from '../util/api/profiles';
 import { TASK_STATUSES, TASK_STATUS_DISPLAY_NAMES } from '../util/api/types';
+
+interface TaskSectionProps {
+  title: string;
+  tasks: Task[];
+  handleStatusChange: (taskId: number, newStatus: TaskStatus) => void;
+  handleOpenSendEmailModal: (task: Task) => void;
+  handleOpenModal: (task: Task) => void;
+}
+
+function TaskSection({ title, tasks, handleStatusChange, handleOpenSendEmailModal, handleOpenModal }: TaskSectionProps) {
+  return (
+    <Box>
+      <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold' }}>
+        {title} ({tasks.length})
+      </Typography>
+      {tasks.length === 0 ? (
+        <Typography color="text.secondary" sx={{ pl: 1 }}>
+          No tasks in this section.
+        </Typography>
+      ) : (
+        <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
+          <Table sx={{ minWidth: 650 }} aria-label={`${title} tasks table`}>
+            <TableHead>
+              <TableRow>
+                <TableCell>Sponsor Email</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Due Date</TableCell>
+                <TableCell>Notes</TableCell>
+                <TableCell align="right" sx={{ width: 240 }}>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {tasks.map((task) => (
+                <TableRow key={task.id} hover>
+                  <TableCell component="th" scope="row">{task.sponsor_email}</TableCell>
+                  <TableCell>
+                    <TextField
+                      select
+                      value={task.status}
+                      onChange={(e) => handleStatusChange(task.id, e.target.value as TaskStatus)}
+                      size="small"
+                      sx={{ minWidth: 150 }}
+                      disabled={task.status === "PENDING_EMAIL"}
+                    >
+                      {TASK_STATUSES.map((status: TaskStatus) => (
+                        <MenuItem 
+                          key={status} 
+                          value={status}
+                          disabled={status === "PENDING_EMAIL"}
+                        >
+                          {TASK_STATUS_DISPLAY_NAMES[status]}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </TableCell>
+                  <TableCell>{new Date(task.due_date).toLocaleDateString()}</TableCell>
+                  <TableCell>{task.notes}</TableCell>
+                  <TableCell align="right" sx={{ width: 240 }}>
+                    <Stack direction="row" spacing={1} justifyContent="flex-end">
+                      {task.status === "PENDING_EMAIL" && (
+                        <Button variant="contained" size="small" onClick={() => handleOpenSendEmailModal(task)}>
+                          Send Email
+                        </Button>
+                      )}
+                      <Button variant="outlined" size="small" onClick={() => handleOpenModal(task)}>
+                        View Emails
+                      </Button>
+                    </Stack>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+    </Box>
+  );
+}
 
 export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -15,8 +93,11 @@ export default function Tasks() {
   // State for the "View Emails" modal
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
-  // ✨ State for the new "Send Email" modal
+  // State for the "Send Email" modal
   const [taskToSendEmailFor, setTaskToSendEmailFor] = useState<Task | null>(null);
+
+  // State for the status filter
+  const [statusFilter, setStatusFilter] = useState<TaskStatus[]>([...TASK_STATUSES]);
 
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [ownerFilter, setOwnerFilter] = useState<string>("me");
@@ -42,6 +123,43 @@ export default function Tasks() {
       console.error("Failed to fetch users:", err);
     }
   };
+
+  const categorizedTasks = useMemo(() => {
+    const needsReply: Task[] = [];
+    const important: Task[] = [];
+    const other: Task[] = [];
+    
+    // Create a Set for quick lookups
+    const statusFilterSet = new Set(statusFilter);
+
+    // Apply the status filter *before* categorizing
+    const filteredTasks = tasks.filter(task => statusFilterSet.has(task.status));
+
+    const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+
+    // Now, categorize the *filtered* tasks
+    for (const task of filteredTasks) {
+      if (task.status === "NEEDS_REPLY") {
+        needsReply.push(task);
+      } else {
+        const updatedAt = new Date(task.updated_at);
+        if (updatedAt < fiveDaysAgo) {
+          important.push(task);
+        } else {
+          other.push(task);
+        }
+      }
+    }
+    
+    const sortByDate = (a: Task, b: Task) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+    
+    return {
+      needsReply: needsReply.sort(sortByDate),
+      important: important.sort(sortByDate),
+      other: other.sort(sortByDate),
+    };
+
+  }, [tasks, statusFilter]);
 
   const handleStatusChange = async (taskId: number, newStatus: TaskStatus) => {
     const originalTasks = [...tasks]; // Save original state for revert
@@ -70,6 +188,13 @@ export default function Tasks() {
         // On failure, revert to the original state
         setTasks(originalTasks);
     }
+  };
+
+  const handleStatusFilterChange = (event: SelectChangeEvent<unknown>) => {
+    const { target: { value } } = event;
+    setStatusFilter(
+      typeof value === 'string' ? (value.split(',') as TaskStatus[]) : value as TaskStatus[]
+    );
   };
   
   useEffect(() => {
@@ -123,7 +248,67 @@ export default function Tasks() {
             <Typography variant="h4" gutterBottom>
               Tasks
             </Typography>
-            <TextField
+
+            <Stack direction="row" spacing={2}>
+              <TextField
+                select
+                label="Filter by Status"
+                value={statusFilter}
+                sx={{ minWidth: 200 }}
+                size="small"
+                SelectProps={{
+                  multiple: true,
+                  onChange: handleStatusFilterChange,
+                  // This renders the selected values as chips
+                  renderValue: (selected) => {
+                    const selectedStatuses = selected as TaskStatus[];
+
+                    // Case 1: All statuses are selected
+                    if (selectedStatuses.length === TASK_STATUSES.length) {
+                      return (
+                        <Typography variant="body2" sx={{ pl: 0.5 }}>
+                          All Statuses
+                        </Typography>
+                      );
+                    }
+
+                    // Case 2: No statuses are selected
+                    if (selectedStatuses.length === 0) {
+                      return (
+                        <Typography variant="body2" color="text.secondary" sx={{ pl: 0.5 }}>
+                          Select status...
+                        </Typography>
+                      );
+                    }
+
+                    // Case 3: 1 or more are selected (but not all)
+                    return (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        <Chip
+                          key={selectedStatuses[0]}
+                          label={TASK_STATUS_DISPLAY_NAMES[selectedStatuses[0]]}
+                          size="small"
+                        />
+                        {/* If there's more than one, show the "+N more" chip */}
+                        {selectedStatuses.length > 1 && (
+                          <Chip
+                            label={`+${selectedStatuses.length - 1} more`}
+                            size="small"
+                          />
+                        )}
+                      </Box>
+                    );
+                  },
+                }}
+              >
+                {TASK_STATUSES.map((status) => (
+                  <MenuItem key={status} value={status}>
+                    {TASK_STATUS_DISPLAY_NAMES[status]}
+                  </MenuItem>
+                ))}
+              </TextField>
+
+              <TextField
                 select
                 label="View Tasks For"
                 value={ownerFilter}
@@ -141,67 +326,35 @@ export default function Tasks() {
                   </MenuItem>
                 ))}
               </TextField>
+
+            </Stack>
           </Stack>
 
-          <TableContainer component={Paper}>
-            <Table sx={{ minWidth: 650 }} aria-label="tasks table">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Sponsor Email</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Due Date</TableCell>
-                  <TableCell>Notes</TableCell>
-                  {/* ✅ Right align + fixed width to match body cells */}
-                  <TableCell align="right" sx={{ width: 240 }}>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {tasks.map((task) => (
-                  <TableRow key={task.id}>
-                    <TableCell component="th" scope="row">{task.sponsor_email}</TableCell>
-                    <TableCell>
-                      <TextField
-                        select
-                        value={task.status}
-                        onChange={(e) => handleStatusChange(task.id, e.target.value as TaskStatus)}
-                        size="small"
-                        sx={{ minWidth: 150 }}
-                        // Prevent the dropdown from changing status for "PENDING_EMAIL"
-                        // as that should only be changed by sending the email.
-                        disabled={task.status === "PENDING_EMAIL"}
-                      >
-                        {TASK_STATUSES.map((status: TaskStatus) => (
-                          <MenuItem 
-                            key={status} 
-                            value={status}
-                            // Don't allow manually selecting PENDING_EMAIL
-                            disabled={status === "PENDING_EMAIL"}
-                          >
-                            {TASK_STATUS_DISPLAY_NAMES[status]}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    </TableCell>
-                    <TableCell>{new Date(task.due_date).toLocaleDateString()}</TableCell>
-                    <TableCell>{task.notes}</TableCell>
-                    {/* ✅ Match header: right aligned cell + Stack for layout */}
-                    <TableCell align="right" sx={{ width: 240 }}>
-                      <Stack direction="row" spacing={1} justifyContent="flex-end">
-                        {task.status === "PENDING_EMAIL" && (
-                          <Button variant="contained" size="small" onClick={() => handleOpenSendEmailModal(task)}>
-                            Send Email
-                          </Button>
-                        )}
-                        <Button variant="outlined" size="small" onClick={() => handleOpenModal(task)}>
-                          View Emails
-                        </Button>
-                      </Stack>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <Stack spacing={4}>
+            <TaskSection
+              title="Needs Reply"
+              tasks={categorizedTasks.needsReply}
+              handleStatusChange={handleStatusChange}
+              handleOpenModal={handleOpenModal}
+              handleOpenSendEmailModal={handleOpenSendEmailModal}
+            />
+
+            <TaskSection
+              title="Important (Older than 5 days)"
+              tasks={categorizedTasks.important}
+              handleStatusChange={handleStatusChange}
+              handleOpenModal={handleOpenModal}
+              handleOpenSendEmailModal={handleOpenSendEmailModal}
+            />
+            
+            <TaskSection
+              title="Other Tasks"
+              tasks={categorizedTasks.other}
+              handleStatusChange={handleStatusChange}
+              handleOpenModal={handleOpenModal}
+              handleOpenSendEmailModal={handleOpenSendEmailModal}
+            />
+          </Stack>
         </CardContent>
       </Card>
 
