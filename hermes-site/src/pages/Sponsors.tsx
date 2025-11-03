@@ -214,7 +214,7 @@ export default function SponsorsPage() {
                     <TableRow key={r.sponsor_email} hover>
                       <TableCell>{r.sponsor_name}</TableCell>
                       <TableCell>
-                        <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
                           {r.sponsor_email}
                         </Typography>
                       </TableCell>
@@ -227,7 +227,7 @@ export default function SponsorsPage() {
                         {uniqueOwnerNames.length > 0
                           ? (
                             uniqueOwnerNames.map((name, index) => (
-                              <Typography key={index} variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+                              <Typography key={index} variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
                                 {name}
                               </Typography>
                             ))
@@ -238,8 +238,14 @@ export default function SponsorsPage() {
                         }
                       </TableCell>
 
-                      <TableCell>
-                        <Typography variant="body2" noWrap title={r.notes ?? ''}>
+                      <TableCell sx={{ maxWidth: 300 }}> {/* Control width */}
+                        <Typography 
+                          variant="body2" 
+                          title={r.notes ?? ''} 
+                          sx={{ 
+                            whiteSpace: 'pre-wrap',  // Allow wrapping and respect newlines
+                          }}
+                        >
                           {r.notes || "-"}
                         </Typography>
                       </TableCell>
