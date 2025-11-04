@@ -9,6 +9,7 @@ import { BASE_BACKEND_URL, DEFAULT_CONTACT_EMAIL } from '../config';
 import { ReplyEmailsInput } from '../components/emails/ReplyEmailsInput';
 import { makeReplyQuotePlain } from '../util/helpers/make-reply-quotes-plain';
 import { normalizeEmails } from '../util/helpers/normalize-emails';
+import MDEditor from '@uiw/react-md-editor';
 
 interface ReplyEmailModalProps {
   emailToReplyTo: Email;
@@ -146,16 +147,16 @@ export default function ReplyEmailModal({ emailToReplyTo, open, onClose, onEmail
           placeholder="Add Bcc recipients and press Enter or +"
         />
 
-        <TextField
-          label="Body"
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          multiline
-          rows={10}
-          fullWidth
-          required
-          autoFocus
-        />
+        <Box data-color-mode="light">
+          <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 500 }}>Body</Typography>
+          <MDEditor
+            value={body}
+            onChange={(value) => setBody(value || '')}
+            height={300}
+            preview="edit"
+            autoFocus
+          />
+        </Box>
 
         <FormControl>
           <RadioGroup

@@ -15,6 +15,7 @@ import { SendEmailsInput } from '../components/emails/SendEmailsInput';
 import { sendEmail } from '../util/api/emails';
 import type { Task } from '../util/api/types';
 import { DEFAULT_CONTACT_EMAIL } from '../config';
+import MDEditor from '@uiw/react-md-editor';
 
 interface EmailFormData {
   subject: string;
@@ -172,16 +173,16 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
           fullWidth
           required
         />
-        <TextField
-          label="Body"
-          name="body"
-          value={formData.body}
-          onChange={(e) => setFormData((p) => ({ ...p, body: e.target.value }))}
-          multiline
-          rows={10}
-          fullWidth
-          required
-        />
+        
+        <Box data-color-mode="light">
+          <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 500 }}>Body</Typography>
+          <MDEditor
+            value={formData.body}
+            onChange={(value) => setFormData((p) => ({ ...p, body: value || '' }))}
+            height={300}
+            preview="edit" // Show only the editor by default
+          />
+        </Box>
 
         {error && <Typography color="error">{error}</Typography>}
 
