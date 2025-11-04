@@ -1,4 +1,5 @@
 export interface Email {
+    direction: 'INBOUND' | 'OUTBOUND';
     gmail_message_id: string;
     sender_email: string;
     to_recipients: string[];

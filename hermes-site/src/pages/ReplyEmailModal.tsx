@@ -31,6 +31,8 @@ const modalStyle = {
   display: 'flex',
   flexDirection: 'column' as const,
   gap: 2,
+  maxHeight: '90vh', // Set a max height (90% of viewport height)
+  overflowY: 'auto'
 };
   
   
@@ -61,6 +63,8 @@ export default function ReplyEmailModal({ emailToReplyTo, open, onClose, onEmail
     }
   }, [emailToReplyTo]);
 
+  const isReplyingToSelf = emailToReplyTo.direction === 'OUTBOUND'; // if the email is outgoing, we are replying to ourselves
+
   useEffect(() => {
     if (!open || !emailToReplyTo) return; // Don't run if modal is closed
 
@@ -68,27 +72,33 @@ export default function ReplyEmailModal({ emailToReplyTo, open, onClose, onEmail
     let baseCcList: string[] = [DEFAULT_CONTACT_EMAIL];
 
     if (replyType === 'REPLY_ALL') {
-      // User selected "Reply All"
       const originalTo = emailToReplyTo.to_recipients || [];
       const originalCc = emailToReplyTo.cc_recipients || [];
-      const originalSender = emailToReplyTo.sender_email;
 
-      // Combine all original recipients
-      const allRecipients = [...originalTo, ...originalCc];
-      
-      // Filter out the original sender (who is already in the "To" field)
-      const replyAllRecipients = allRecipients.filter(
-        email => email.toLowerCase() !== originalSender.toLowerCase()
-      );
-      
-      // Add them to our base list
-      baseCcList = baseCcList.concat(replyAllRecipients);
+      if (isReplyingToSelf) {
+        // We are replying to our own email.
+        // 'To' is already set to the original recipients.
+        // We just need to add the *original* CC list.
+        baseCcList = baseCcList.concat(originalCc);
+      } else {
+        // We are replying to someone else.
+        // 'To' is already set to the original sender.
+        // We need to add the original 'To' list AND the original 'Cc' list.
+        const originalSender = emailToReplyTo.sender_email;
+
+        // Filter out the original sender (who is already in 'To')
+        const replyAllTo = originalTo.filter(
+          (email) => email.toLowerCase() !== originalSender.toLowerCase(),
+        );
+
+        baseCcList = baseCcList.concat(replyAllTo);
+        baseCcList = baseCcList.concat(originalCc);
+      }
     }
-    
+
     // Set the CC field, removing duplicates
     setCc(normalizeEmails(baseCcList));
-
-  }, [replyType, open, emailToReplyTo]);
+  }, [replyType, open, emailToReplyTo, isReplyingToSelf]);
 
   const handleSendReply = async () => {
     setIsSending(true);
@@ -121,6 +131,12 @@ export default function ReplyEmailModal({ emailToReplyTo, open, onClose, onEmail
     }
   };
 
+  const toRecipient = isReplyingToSelf
+    ? (emailToReplyTo.to_recipients || []).join(', ') // 'To' should be the *original* recipients
+    : emailToReplyTo.sender_email; // 'To' is the sender
+
+  const toLabel = isReplyingToSelf ? "To (Original Recipients)" : "To";
+
   const subject = emailToReplyTo.subject!.toLowerCase().startsWith('re:')
     ? emailToReplyTo.subject
     : `Re: ${emailToReplyTo.subject}`;
@@ -129,8 +145,8 @@ export default function ReplyEmailModal({ emailToReplyTo, open, onClose, onEmail
     <Modal open={open} onClose={onClose}>
       <Box sx={modalStyle}>
         <Typography variant="h6">Replying to {emailToReplyTo.sender_email}</Typography>
-
-        <TextField label="To" value={emailToReplyTo.sender_email} disabled fullWidth />
+        
+        <TextField label={toLabel} value={toRecipient} disabled fullWidth />
         <TextField label="Subject" value={subject} disabled fullWidth />
 
         {/* Each on its own line */}
