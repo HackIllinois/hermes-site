@@ -9,6 +9,8 @@ import Sponsors from './pages/Sponsors';
 import Tasks from './pages/Tasks';
 import Users from './pages/Users';
 import { PageNotFound } from './pages/PageNotFound';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 
 // Validate environment variables on startup
 validateEnv();
@@ -25,20 +27,22 @@ const theme = createTheme({
 function App() {
   return (
     <ThemeProvider theme={theme}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Login />} />
-          <Route element={<ProtectedRoute />}>
-            <Route path="/app" element={<AppLayout />}>
-                <Route index element={<Navigate to="tasks" replace />} />
-                <Route path="tasks" element={<Tasks />} />
-                <Route path="sponsors" element={<Sponsors />} />
-                <Route path="users" element={<Users />} />
+      <LocalizationProvider dateAdapter={AdapterDayjs}>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Login />} />
+            <Route element={<ProtectedRoute />}>
+              <Route path="/app" element={<AppLayout />}>
+                  <Route index element={<Navigate to="tasks" replace />} />
+                  <Route path="tasks" element={<Tasks />} />
+                  <Route path="sponsors" element={<Sponsors />} />
+                  <Route path="users" element={<Users />} />
+              </Route>
             </Route>
-          </Route>
-          <Route path="*" element={<PageNotFound />} />
-        </Routes>
-      </BrowserRouter>
+            <Route path="*" element={<PageNotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </LocalizationProvider>
     </ThemeProvider>
   );
 }

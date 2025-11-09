@@ -20,6 +20,15 @@ export interface SendEmail {
     bcc: string[] | null;
 }
 
+export interface EmailReply {
+    email_thread_id: number;
+    message_id_to_reply_to: string;
+    body: string;
+    reply_type: "REPLY" | "REPLY_ALL";
+    cc: string[] | null;
+    bcc: string[] | null;
+}
+
 export interface SendEmailResponse {
     message: string;
     data: {
@@ -27,6 +36,17 @@ export interface SendEmailResponse {
         thread_id: string;
     }
     response_status: number;
+}
+
+export interface EmailReplyResponse {
+    message: string;
+    response_status: number;
+}
+export interface EmailScheduleRequest {
+    email_thread_id?: number;
+    contact_task_id?: number;
+    send_at: string; // A stringified Unix timestamp
+    job_data: SendEmail | EmailReply; // The payload will be one of these
 }
 
 export interface Task {

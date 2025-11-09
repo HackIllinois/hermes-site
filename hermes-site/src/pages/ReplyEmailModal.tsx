@@ -2,14 +2,25 @@
 import { useEffect, useState } from 'react';
 import {
   Box, Button, CircularProgress, Modal, TextField, Typography,
-  RadioGroup, FormControlLabel, Radio, FormControl
+  RadioGroup, FormControlLabel, Radio, FormControl,
+  ButtonGroup,
+  ClickAwayListener,
+  Grow,
+  Paper,
+  Popper,
+  Stack,
 } from '@mui/material';
 import type { Email } from '../util/api/types';
-import { BASE_BACKEND_URL, DEFAULT_CONTACT_EMAIL } from '../config';
+import { DEFAULT_CONTACT_EMAIL } from '../config';
 import { ReplyEmailsInput } from '../components/emails/ReplyEmailsInput';
 import { makeReplyQuotePlain } from '../util/helpers/make-reply-quotes-plain';
 import { normalizeEmails } from '../util/helpers/normalize-emails';
 import MDEditor from '@uiw/react-md-editor';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import dayjs, { type Dayjs } from 'dayjs';
+import { replyToEmail, scheduleEmail } from '../util/api/emails';
+import type { EmailReply, EmailScheduleRequest } from '../util/api/types';
 
 interface ReplyEmailModalProps {
   emailToReplyTo: Email;
@@ -46,6 +57,9 @@ export default function ReplyEmailModal({ emailToReplyTo, open, onClose, onEmail
   // NEW: cc/bcc chip inputs (each on its own line)
   const [cc, setCc] = useState<string[]>([]);
   const [bcc, setBcc] = useState<string[]>([]);
+
+  const [scheduleAnchorEl, setScheduleAnchorEl] = useState<null | HTMLElement>(null);
+  const [scheduleDate, setScheduleDate] = useState<Dayjs | null>(dayjs().add(1, 'hour'));
 
   useEffect(() => {
     if (emailToReplyTo) {
@@ -100,28 +114,70 @@ export default function ReplyEmailModal({ emailToReplyTo, open, onClose, onEmail
     setCc(normalizeEmails(baseCcList));
   }, [replyType, open, emailToReplyTo, isReplyingToSelf]);
 
+  const handleScheduleReply = async () => {
+    if (!scheduleDate || scheduleDate.isBefore(dayjs())) {
+      setError("Cannot schedule an email in the past.");
+      return;
+    }
+
+    setIsSending(true);
+    setError(null);
+    setScheduleAnchorEl(null);
+
+    try {
+      // 1. Get Unix timestamp as a string
+      const unixTimestamp = String(scheduleDate.unix());
+
+      // 2. Create the job_data payload
+      const jobData: EmailReply = {
+        email_thread_id: emailToReplyTo.thread_id || -1, // -1 is a placeholder for no thread id
+        message_id_to_reply_to: emailToReplyTo.gmail_message_id,
+        body: body,
+        reply_type: replyType,
+        cc: cc,
+        bcc:bcc,
+      }
+
+      console.log("email to reply to", emailToReplyTo);
+
+      // 3. Create the schedule request
+      const payload: EmailScheduleRequest = {
+        email_thread_id: emailToReplyTo.thread_id || -1, // Get task_id from the email
+        send_at: unixTimestamp,
+        job_data: jobData,
+      };
+
+      // 4. Call the new API
+      await scheduleEmail(payload);
+
+      // 5. Success
+      onEmailSent(); // Refresh tasks
+      onClose();
+
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const handleSendReply = async () => {
     setIsSending(true);
     setError(null);
     try {
-      const response = await fetch(`${BASE_BACKEND_URL}/emails/reply`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          db_thread_id: emailToReplyTo.thread_id,
-          message_id_to_reply_to: emailToReplyTo.gmail_message_id,
-          body,
-          reply_type: replyType,
-          cc,
-          bcc,
-        }),
+      const response = await replyToEmail({
+        email_thread_id: emailToReplyTo.thread_id || -1, // -1 is a placeholder for no thread id
+        message_id_to_reply_to: emailToReplyTo.gmail_message_id,
+        body,
+        reply_type: replyType,
+        cc,
+        bcc,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to send reply.');
+      if (response.response_status !== 200) {
+        throw new Error(response.message);
       }
+
       onEmailSent();
       onClose();
     } catch (err) {
@@ -187,11 +243,56 @@ export default function ReplyEmailModal({ emailToReplyTo, open, onClose, onEmail
 
         {error && <Typography color="error">{error}</Typography>}
 
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, position: 'relative' }}>
           <Button onClick={onClose} color="secondary">Cancel</Button>
-          <Button onClick={handleSendReply} variant="contained" disabled={isSending}>
-            {isSending ? <CircularProgress size={24} /> : 'Send Reply'}
-          </Button>
+          
+          <ButtonGroup variant="contained" disabled={isSending}>
+            <Button
+              onClick={handleSendReply}
+              disabled={isSending}
+              startIcon={isSending ? <CircularProgress size={20} color="inherit" /> : null}
+            >
+              Send Reply
+            </Button>
+            <Button
+              size="small"
+              onClick={(e) => setScheduleAnchorEl(e.currentTarget)}
+            >
+              <ArrowDropDownIcon />
+            </Button>
+          </ButtonGroup>
+
+          <Popper
+            sx={{ zIndex: 1301 }} // Ensure it's above the modal (1300)
+            open={!!scheduleAnchorEl}
+            anchorEl={scheduleAnchorEl}
+            transition
+          >
+            {({ TransitionProps }) => (
+              <Grow {...TransitionProps} style={{ transformOrigin: 'bottom right' }}>
+                <Paper sx={{ p: 2, mt: 1, boxShadow: 4, borderRadius: 2 }}>
+                  <ClickAwayListener onClickAway={() => setScheduleAnchorEl(null)}>
+                    <Stack spacing={2}>
+                      <Typography variant="h6">Schedule Send</Typography>
+                      <DateTimePicker
+                        label="Send at"
+                        value={scheduleDate}
+                        onChange={(newValue) => setScheduleDate(newValue)}
+                        disablePast
+                      />
+                      <Button
+                        variant="contained"
+                        onClick={handleScheduleReply}
+                        disabled={!scheduleDate || isSending}
+                      >
+                        Schedule
+                      </Button>
+                    </Stack>
+                  </ClickAwayListener>
+                </Paper>
+              </Grow>
+            )}
+          </Popper>
         </Box>
 
         <Typography variant="caption" color="text.secondary">
