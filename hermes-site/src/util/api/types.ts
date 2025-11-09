@@ -49,6 +49,21 @@ export interface EmailScheduleRequest {
     job_data: SendEmail | EmailReply; // The payload will be one of these
 }
 
+export interface ScheduledSendTableResponse {
+    id: number;
+    contact_task_id: number;
+    created_at: string;
+    send_at: string; // This is an ISO 8601 string
+    status: 'PENDING' | 'SENT' | 'ERROR';
+    job_data: SendEmail | EmailReply; // The frontend will parse this
+    error_log: string | null;
+}
+
+export interface TaskEmailHistory {
+    sent_emails: Email[];
+    scheduled_sends: ScheduledSendTableResponse[];
+}
+
 export interface Task {
     id: number;
     sponsor_email: string;
