@@ -11,6 +11,7 @@ import Users from './pages/Users';
 import { PageNotFound } from './pages/PageNotFound';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import Templates from './pages/Templates';
 
 // Validate environment variables on startup
 validateEnv();
@@ -37,6 +38,7 @@ function App() {
                   <Route path="tasks" element={<Tasks />} />
                   <Route path="sponsors" element={<Sponsors />} />
                   <Route path="users" element={<Users />} />
+                  <Route path="templates" element={<Templates />} />
               </Route>
             </Route>
             <Route path="*" element={<PageNotFound />} />

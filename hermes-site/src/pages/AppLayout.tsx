@@ -15,14 +15,15 @@ import {
 import { useEffect, useMemo } from 'react';
 import { Link, Outlet, useLocation } from 'react-router';
 import { watchEmailSync } from '../util/api/emails';
+import TextSnippetIcon from '@mui/icons-material/TextSnippet';
 
 const drawerWidth = 240;
 
 export default function AppLayout() {
   const { pathname } = useLocation();
-  const selected = useMemo<'tasks' | 'sponsors' | 'users'>(() => {
+  const selected = useMemo<'tasks' | 'sponsors' | 'templates'>(() => {
     if (pathname.endsWith('/sponsors')) return 'sponsors';
-    if (pathname.endsWith('/users')) return 'users';
+    if (pathname.endsWith('/templates')) return 'templates';
     return 'tasks';
   }, [pathname]);
 
@@ -107,13 +108,13 @@ export default function AppLayout() {
 
           <ListItemButton
             component={Link}
-            to="users"
-            selected={selected === 'users'}
+            to="templates"
+            selected={selected === 'templates'}
           >
             <ListItemIcon sx={{ minWidth: 40 }}>
-              <PeopleIcon />
+              <TextSnippetIcon />
             </ListItemIcon>
-            <ListItemText primary="Users" />
+            <ListItemText primary="Templates" />
           </ListItemButton>
         </List>
       </Drawer>

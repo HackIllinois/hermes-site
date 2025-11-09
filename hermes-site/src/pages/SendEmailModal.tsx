@@ -13,17 +13,19 @@ import {
   Grow,
   Paper,
   Popper,
+  MenuItem,
 } from '@mui/material';
 import { isValidEmail } from '../util/helpers/validate-email';
 import { normalizeEmails } from '../util/helpers/normalize-emails';
 import { SendEmailsInput } from '../components/emails/SendEmailsInput';
 import { scheduleEmail, sendEmail } from '../util/api/emails';
-import type { EmailScheduleRequest, SendEmail, Task } from '../util/api/types';
+import type { EmailScheduleRequest, SendEmail, Task, Template } from '../util/api/types';
 import { DEFAULT_CONTACT_EMAIL } from '../config';
 import MDEditor from '@uiw/react-md-editor';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import dayjs, { type Dayjs } from 'dayjs'
+import { getTemplates } from '../util/api/templates';
 
 interface EmailFormData {
   subject: string;
@@ -50,6 +52,8 @@ const modalStyle = {
   display: 'flex',
   flexDirection: 'column' as const,
   gap: 2,
+  maxHeight: '90vh', // ✨ ADD THIS
+  overflowY: 'auto',
 };
 
 export default function SendEmailModal({ task, open, onClose, onEmailSent }: SendEmailModalProps) {
@@ -70,6 +74,10 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
   const [_, setScheduleOpen] = useState(false);
   const [scheduleDate, setScheduleDate] = useState<Dayjs | null>(dayjs().add(1, 'hour'));
 
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>(""); // Store template ID
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+
   // Prefill sponsor in To when modal opens or task changes
   useEffect(() => {
     if (open) {
@@ -83,8 +91,46 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
       
       // ✨ 3. Automatically show the Cc field
       setHideCc(false);
+
+      const fetchTemplates = async () => {
+        setLoadingTemplates(true);
+        try {
+          const data = await getTemplates();
+          setTemplates(data);
+        } catch (error) {
+          console.error("Failed to fetch templates", error);
+        } finally {
+          setLoadingTemplates(false);
+        }
+      };
+      
+      fetchTemplates();
     }
   }, [open, task]);
+
+  useEffect(() => {
+    if (selectedTemplate) {
+      const template = templates.find(t => t.id === parseInt(selectedTemplate));
+      if (template) {
+        setFormData({
+          subject: template.subject || '',
+          body: template.body || '',
+        });
+      }
+    }
+  }, [selectedTemplate, templates]);
+
+  const companyNameCheck = (): boolean => {
+    const regex = /company name/i; // Case-insensitive check
+    if (regex.test(formData.subject) || regex.test(formData.body)) {
+      return window.confirm(
+        'Warning: The subject or body contains "COMPANY NAME".\n\n' +
+        'Did you mean to replace this with the actual company name?\n\n' +
+        'Press OK to send anyway, or Cancel to go back and edit.'
+      );
+    }
+    return true; // No "COMPANY NAME" found, proceed
+  };
 
   const canSend = useMemo(() => {
     return (
@@ -102,6 +148,11 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
       setError('Please provide a subject, body, and at least one valid recipient.');
       return;
     }
+
+    if (!companyNameCheck()) {
+      return; // User clicked "Cancel"
+    }
+
     setIsSending(true);
     setError(null);
 
@@ -149,9 +200,14 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
       setError('Cannot schedule. Please provide a subject, body, and at least one valid recipient.');
       return;
     }
+
     if (!scheduleDate || scheduleDate.isBefore(dayjs())) {
       setError("Cannot schedule an email in the past.");
       return;
+    }
+
+    if (!companyNameCheck()) {
+      return; // User clicked "Cancel"
     }
 
     setIsSending(true);
@@ -202,6 +258,25 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
         <Typography variant="h6" sx={{ mb: 1 }}>
           New Email
         </Typography>
+
+        <TextField
+          select
+          label="Select Template"
+          value={selectedTemplate}
+          onChange={(e) => setSelectedTemplate(e.target.value)}
+          fullWidth
+          disabled={loadingTemplates}
+          helperText={loadingTemplates ? "Loading templates..." : "Select a template to auto-fill subject and body."}
+        >
+          <MenuItem value="">
+            <em>None</em>
+          </MenuItem>
+          {templates.map((template) => (
+            <MenuItem key={template.id} value={template.id}>
+              {template.template_name}
+            </MenuItem>
+          ))}
+        </TextField>
 
         {/* Recipients */}
         <Stack spacing={1}>

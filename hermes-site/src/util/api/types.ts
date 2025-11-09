@@ -163,3 +163,12 @@ export interface UserProfile {
     name: string;
 }
 
+export interface Template {
+    id: number;
+    user_id: string;
+    template_name: string;
+    subject: string | null;
+    body: string | null;
+    created_at: string;
+    updated_at: string;
+}
