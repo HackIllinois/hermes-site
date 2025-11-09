@@ -26,6 +26,7 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import dayjs, { type Dayjs } from 'dayjs'
 import { getTemplates } from '../util/api/templates';
+import { replaceTemplate } from '../util/helpers/replace-template';
 
 interface EmailFormData {
   subject: string;
@@ -113,15 +114,15 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
       const template = templates.find(t => t.id === parseInt(selectedTemplate));
       if (template) {
         setFormData({
-          subject: template.subject || '',
-          body: template.body || '',
+          subject: replaceTemplate(template.subject || '', task.sponsors),
+          body: replaceTemplate(template.body || '', task.sponsors),
         });
       }
     }
   }, [selectedTemplate, templates]);
 
   const companyNameCheck = (): boolean => {
-    const regex = /company name/i; // Case-insensitive check
+    const regex = /\[.+\]/; // Case-insensitive check
     if (regex.test(formData.subject) || regex.test(formData.body)) {
       return window.confirm(
         'Warning: The subject or body contains "COMPANY NAME".\n\n' +
