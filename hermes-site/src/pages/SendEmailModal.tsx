@@ -8,14 +8,22 @@ import {
   TextField,
   Typography,
   Stack,
+  ButtonGroup,
+  ClickAwayListener,
+  Grow,
+  Paper,
+  Popper,
 } from '@mui/material';
 import { isValidEmail } from '../util/helpers/validate-email';
 import { normalizeEmails } from '../util/helpers/normalize-emails';
 import { SendEmailsInput } from '../components/emails/SendEmailsInput';
-import { sendEmail } from '../util/api/emails';
-import type { Task } from '../util/api/types';
+import { scheduleEmail, sendEmail } from '../util/api/emails';
+import type { EmailScheduleRequest, SendEmail, Task } from '../util/api/types';
 import { DEFAULT_CONTACT_EMAIL } from '../config';
 import MDEditor from '@uiw/react-md-editor';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import dayjs, { type Dayjs } from 'dayjs'
 
 interface EmailFormData {
   subject: string;
@@ -57,6 +65,10 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
   // Toggle show/hide like Gmail
   const [hideCc, setHideCc] = useState(true);
   const [hideBcc, setHideBcc] = useState(true);
+
+  const [scheduleAnchorEl, setScheduleAnchorEl] = useState<null | HTMLElement>(null);
+  const [_, setScheduleOpen] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState<Dayjs | null>(dayjs().add(1, 'hour'));
 
   // Prefill sponsor in To when modal opens or task changes
   useEffect(() => {
@@ -116,6 +128,65 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
       setBcc([]);
       setHideCc(true);
       setHideBcc(true);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({ subject: '', body: '' });
+    setTo([]);
+    setCc([]);
+    setBcc([]);
+    setHideCc(true);
+    setHideBcc(true);
+  };
+
+  const handleScheduleSend = async () => {
+    if (!canSend) {
+      setError('Cannot schedule. Please provide a subject, body, and at least one valid recipient.');
+      return;
+    }
+    if (!scheduleDate || scheduleDate.isBefore(dayjs())) {
+      setError("Cannot schedule an email in the past.");
+      return;
+    }
+
+    setIsSending(true);
+    setError(null);
+    setScheduleOpen(false);
+
+    try {
+      // 1. Get Unix timestamp as a string
+      const unixTimestamp = String(scheduleDate.unix());
+
+      // 2. Create the job_data payload
+      const jobData: SendEmail = {
+        contact_task_id: task.id,
+        subject: formData.subject,
+        body: formData.body,
+        to: to,
+        cc: cc,
+        bcc: bcc,
+      };
+
+      // 3. Create the schedule request
+      const payload: EmailScheduleRequest = {
+        contact_task_id: task.id,
+        send_at: unixTimestamp,
+        job_data: jobData,
+      };
+
+      // 4. Call the new API
+      await scheduleEmail(payload);
+
+      // 5. Success
+      onEmailSent(); // Refresh tasks to show new status
+      onClose();
+      resetForm();
+
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -186,11 +257,57 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
 
         {error && <Typography color="error">{error}</Typography>}
 
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, position: 'relative' }}>
           <Button onClick={onClose} color="secondary">Cancel</Button>
-          <Button onClick={handleSendEmail} variant="contained" disabled={isSending || !canSend}>
-            {isSending ? <CircularProgress size={24} /> : 'Send'}
-          </Button>
+          
+          <ButtonGroup variant="contained" disabled={isSending || !canSend}>
+            <Button
+              onClick={handleSendEmail}
+              disabled={isSending || !canSend}
+              startIcon={isSending ? <CircularProgress size={20} color="inherit" /> : null}
+            >
+              Send
+            </Button>
+            <Button
+              size="small"
+              onClick={(e) => setScheduleAnchorEl(e.currentTarget)}
+            >
+              <ArrowDropDownIcon />
+            </Button>
+          </ButtonGroup>
+
+          <Popper
+            sx={{ zIndex: 1301 }}
+            open={!!scheduleAnchorEl}
+            anchorEl={scheduleAnchorEl}
+            transition
+          >
+            {({ TransitionProps }) => (
+              <Grow {...TransitionProps} style={{ transformOrigin: 'bottom right' }}>
+                <Paper sx={{ p: 2, mt: 1, boxShadow: 4, borderRadius: 2 }}>
+                  <ClickAwayListener onClickAway={() => setScheduleAnchorEl(null)}>
+                    <Stack spacing={2}>
+                      <Typography variant="h6">Schedule Send</Typography>
+                      <DateTimePicker
+                        label="Send at"
+                        value={scheduleDate}
+                        onChange={(newValue) => setScheduleDate(newValue)}
+                        disablePast
+                      />
+                      <Button
+                        variant="contained"
+                        onClick={handleScheduleSend}
+                        disabled={!scheduleDate || isSending}
+                      >
+                        Schedule
+                      </Button>
+                    </Stack>
+                  </ClickAwayListener>
+                </Paper>
+              </Grow>
+            )}
+          </Popper>
+
         </Box>
 
         <Typography variant="caption" color="text.secondary">
