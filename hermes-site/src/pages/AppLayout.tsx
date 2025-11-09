@@ -1,6 +1,5 @@
 import ContactsIcon from '@mui/icons-material/Contacts';
 import ListAltIcon from '@mui/icons-material/ListAlt';
-import PeopleIcon from '@mui/icons-material/People';
 import BoltIcon from '@mui/icons-material/Bolt';
 import {
   Box,
