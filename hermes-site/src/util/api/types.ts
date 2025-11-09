@@ -73,6 +73,7 @@ export interface Task {
     status: TaskStatus;
     created_at: string;
     updated_at: string;
+    sponsors: Sponsor | null;
 }
 
 export type TaskStatus = "PENDING_EMAIL" | "SENT" | "NEEDS_REPLY" | "BUMP_1" | "BUMP_2" | "BUMP_3" | "REJECTED" | "GHOSTED" | "INVALID_CONTACT" | "DEFERRED";
