@@ -122,15 +122,35 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
   }, [selectedTemplate, templates]);
 
   const companyNameCheck = (): boolean => {
-    const regex = /\[.+\]/; // Case-insensitive check
-    if (regex.test(formData.subject) || regex.test(formData.body)) {
-      return window.confirm(
-        'Warning: The subject or body contains "COMPANY NAME".\n\n' +
-        'Did you mean to replace this with the actual company name?\n\n' +
-        'Press OK to send anyway, or Cancel to go back and edit.'
-      );
+    const regex = /\[.+?\]/g;
+    const bodyMatches = formData.body.match(regex);
+    if (bodyMatches) {
+        // If *any* placeholder is in the body, find the first one and show the warning
+        const foundText = bodyMatches[0];
+        return window.confirm(
+            `Warning: The body appears to contain an un-filled placeholder like "${foundText}".\n\n` +
+            'Did you mean to replace this?\n\n' +
+            'Press OK to send anyway, or Cancel to go back and edit.'
+        );
     }
-    return true; // No "COMPANY NAME" found, proceed
+
+    const subjectMatches = formData.subject.match(regex);
+    if (subjectMatches) {
+        // Filter out the allowed placeholder
+        const problematicMatches = subjectMatches.filter(match => match.toUpperCase() !== '[INQUIRY]');
+        
+        if (problematicMatches.length > 0) {
+            // If there are any *other* placeholders, show the warning
+            const foundText = problematicMatches[0];
+            return window.confirm(
+                `Warning: The subject appears to contain an un-filled placeholder like "${foundText}".\n\n` +
+                'Did you mean to replace this?\n\n' +
+                'Press OK to send anyway, or Cancel to go back and edit.'
+            );
+        }
+    }
+
+    return true;
   };
 
   const canSend = useMemo(() => {
