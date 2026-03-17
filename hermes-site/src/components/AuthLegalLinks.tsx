@@ -1,7 +1,7 @@
 import { Link, Stack, Typography } from '@mui/material';
 
-const PRIVACY_POLICY_URL = 'https://info.hackillinois.org/privacy-policy';
-const LEGAL_URL = 'https://hackillinois.org/legal';
+const PRIVACY_POLICY_URL = '/privacy-policy';
+const LEGAL_URL = '/legal';
 
 export default function AuthLegalLinks() {
   return (
