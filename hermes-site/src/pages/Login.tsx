@@ -2,6 +2,7 @@ import BoltIcon from '@mui/icons-material/Bolt';
 import { Box, Stack, Typography } from '@mui/material';
 import Button from '@mui/material/Button';
 import HackLogoLink from '../components/HackIllinoisLogo';
+import AuthLegalLinks from '../components/AuthLegalLinks';
 import { BASE_BACKEND_URL } from '../config';
 
 function Login() {
@@ -51,6 +52,8 @@ function Login() {
             <Button variant="contained" color="primary" size="large" onClick={handleLogin}>
               Log In
             </Button>
+
+            <AuthLegalLinks />
           </Stack>
         </Box>
       </Box>
