@@ -1,7 +1,8 @@
 import { Link, Stack, Typography } from '@mui/material';
 
-const PRIVACY_POLICY_URL = '/privacy-policy';
-const LEGAL_URL = '/legal';
+const PRIVACY_POLICY_URL =
+  typeof window === 'undefined' ? 'https://hermes.hackillinois.org/privacy-policy' : `${window.location.origin}/privacy-policy`;
+const LEGAL_URL = typeof window === 'undefined' ? 'https://hermes.hackillinois.org/legal' : `${window.location.origin}/legal`;
 
 export default function AuthLegalLinks() {
   return (
