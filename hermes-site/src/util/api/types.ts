@@ -164,6 +164,18 @@ export interface UserProfile {
     name: string;
 }
 
+export interface Team {
+    id: number;
+    name: string;
+}
+
+export interface AuthenticatedUser {
+    id: string;
+    email: string | null;
+    role: 'LEAD' | 'MEMBER';
+    team_id: number | null;
+}
+
 export interface Template {
     id: number;
     user_id: string;

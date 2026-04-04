@@ -1,36 +1,34 @@
 // src/components/ProtectedRoute.tsx
 import { useEffect, useState } from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Box, CircularProgress } from '@mui/material';
-import { BASE_BACKEND_URL } from '../config';
+import { getCurrentUser } from '../util/api/auth';
+import type { AuthenticatedUser } from '../util/api/types';
 
 export default function ProtectedRoute() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const { pathname } = useLocation();
+  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<AuthenticatedUser | null>(null);
 
   useEffect(() => {
     const checkSession = async () => {
-      try {
-        // The browser automatically sends the HttpOnly cookie
-        const response = await fetch(`${BASE_BACKEND_URL}/auth/me`, {
-            credentials: 'include',
-        });
+      setIsLoading(true);
 
-        if (response.ok) {
-          setIsAuthenticated(true);
-        } else {
-          setIsAuthenticated(false);
-        }
+      try {
+        const currentUser = await getCurrentUser();
+        setUser(currentUser);
       } catch (error) {
         console.error('Session check failed', error);
-        setIsAuthenticated(false);
+        setUser(null);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     checkSession();
   }, []);
 
-  if (isAuthenticated === null) {
-    // Show a loading spinner while we check the session
+  if (isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
         <CircularProgress />
@@ -38,7 +36,19 @@ export default function ProtectedRoute() {
     );
   }
 
-  // If authenticated, render the nested routes (AppLayout). 
-  // If not, redirect to the login page.
-  return isAuthenticated ? <Outlet /> : <Navigate to="/" replace />;
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const isOnboardingRoute = pathname.startsWith('/onboarding/team');
+
+  if (user.team_id === null && !isOnboardingRoute) {
+    return <Navigate to="/onboarding/team" replace />;
+  }
+
+  if (user.team_id !== null && isOnboardingRoute) {
+    return <Navigate to="/app" replace />;
+  }
+
+  return <Outlet />;
 }

@@ -12,7 +12,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useEffect, useMemo } from 'react';
-import { Link, Outlet, useLocation } from 'react-router';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import { watchEmailSync } from '../util/api/emails';
 import TextSnippetIcon from '@mui/icons-material/TextSnippet';
 

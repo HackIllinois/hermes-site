@@ -15,7 +15,7 @@ import { PageNotFound } from './pages/PageNotFound';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import Templates from './pages/Templates';
-// import TeamSelection from './pages/TeamSelection';
+import TeamSelection from './pages/TeamSelection';
 
 // Validate environment variables on startup
 validateEnv();
@@ -40,7 +40,7 @@ function App() {
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/legal" element={<Legal />} />
             <Route element={<ProtectedRoute />}>
-              {/* <Route path="/onboarding/team" element={<TeamSelection />} /> */}
+              <Route path="/onboarding/team" element={<TeamSelection />} />
               <Route path="/app" element={<AppLayout />}>
                   <Route index element={<Navigate to="tasks" replace />} />
                   <Route path="tasks" element={<Tasks />} />
