@@ -201,6 +201,7 @@ export default function TaskDetailModal({ task, open, onClose }: TaskDetailModal
         {emailToReplyTo && (
             <ReplyEmailModal
                 emailToReplyTo={emailToReplyTo}
+                task={task}
                 open={!!emailToReplyTo}
                 onClose={handleCloseReplyModal}
                 onEmailSent={fetchEmails}

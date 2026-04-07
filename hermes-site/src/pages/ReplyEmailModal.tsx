@@ -11,6 +11,7 @@ import {
   Stack,
 } from '@mui/material';
 import type { Email } from '../util/api/types';
+import type { Task } from '../util/api/types';
 import { DEFAULT_CONTACT_EMAIL } from '../config';
 import { ReplyEmailsInput } from '../components/emails/ReplyEmailsInput';
 import { makeReplyQuotePlain } from '../util/helpers/make-reply-quotes-plain';
@@ -24,6 +25,7 @@ import type { EmailReply, EmailScheduleRequest } from '../util/api/types';
 
 interface ReplyEmailModalProps {
   emailToReplyTo: Email;
+  task: Task;
   open: boolean;
   onClose: () => void;
   onEmailSent: () => void;
@@ -48,7 +50,7 @@ const modalStyle = {
   
   
 
-export default function ReplyEmailModal({ emailToReplyTo, open, onClose, onEmailSent }: ReplyEmailModalProps) {
+export default function ReplyEmailModal({ emailToReplyTo, task, open, onClose, onEmailSent }: ReplyEmailModalProps) {
   const [body, setBody] = useState('');
   const [replyType, setReplyType] = useState<'REPLY' | 'REPLY_ALL'>('REPLY_ALL');
   const [isSending, setIsSending] = useState(false);
@@ -60,6 +62,7 @@ export default function ReplyEmailModal({ emailToReplyTo, open, onClose, onEmail
 
   const [scheduleAnchorEl, setScheduleAnchorEl] = useState<null | HTMLElement>(null);
   const [scheduleDate, setScheduleDate] = useState<Dayjs | null>(dayjs().add(1, 'hour'));
+  const defaultContactEmail = task.team?.default_contact_email?.trim() || DEFAULT_CONTACT_EMAIL;
 
   useEffect(() => {
     if (emailToReplyTo) {
@@ -83,7 +86,7 @@ export default function ReplyEmailModal({ emailToReplyTo, open, onClose, onEmail
     if (!open || !emailToReplyTo) return; // Don't run if modal is closed
 
     // Start with our constant email
-    let baseCcList: string[] = [DEFAULT_CONTACT_EMAIL];
+    let baseCcList: string[] = [defaultContactEmail];
 
     if (replyType === 'REPLY_ALL') {
       const originalTo = emailToReplyTo.to_recipients || [];
@@ -112,7 +115,7 @@ export default function ReplyEmailModal({ emailToReplyTo, open, onClose, onEmail
 
     // Set the CC field, removing duplicates
     setCc(normalizeEmails(baseCcList));
-  }, [replyType, open, emailToReplyTo, isReplyingToSelf]);
+  }, [defaultContactEmail, replyType, open, emailToReplyTo, isReplyingToSelf]);
 
   const handleScheduleReply = async () => {
     if (!scheduleDate || scheduleDate.isBefore(dayjs())) {
