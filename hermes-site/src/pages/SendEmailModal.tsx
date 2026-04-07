@@ -78,6 +78,7 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>(""); // Store template ID
   const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const defaultContactEmail = task.team?.default_contact_email?.trim() || DEFAULT_CONTACT_EMAIL;
 
   // Prefill sponsor in To when modal opens or task changes
   useEffect(() => {
@@ -88,7 +89,7 @@ export default function SendEmailModal({ task, open, onClose, onEmailSent }: Sen
       }
       
       // ✨ 2. Prefill 'Cc' field if it's empty
-      setCc((prev) => (prev.length ? prev : normalizeEmails([DEFAULT_CONTACT_EMAIL])));
+      setCc((prev) => (prev.length ? prev : normalizeEmails([defaultContactEmail])));
       
       // ✨ 3. Automatically show the Cc field
       setHideCc(false);
