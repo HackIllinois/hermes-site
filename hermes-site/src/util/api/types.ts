@@ -79,7 +79,7 @@ export interface Task {
     } | null;
 }
 
-export type TaskStatus = "PENDING_EMAIL" | "SENT" | "NEEDS_REPLY" | "BUMP_1" | "BUMP_2" | "BUMP_3" | "REJECTED" | "GHOSTED" | "INVALID_CONTACT" | "DEFERRED";
+export type TaskStatus = "PENDING_EMAIL" | "SENT" | "NEEDS_REPLY" | "BUMP_1" | "BUMP_2" | "BUMP_3" | "REJECTED" | "GHOSTED" | "INVALID_CONTACT" | "DEFERRED" | "NEED_PAYMENT" | "CONFIRMED";
 export const TASK_STATUSES: TaskStatus[] = [
     "PENDING_EMAIL",
     "SENT",
@@ -91,6 +91,8 @@ export const TASK_STATUSES: TaskStatus[] = [
     "GHOSTED",
     "INVALID_CONTACT",
     "DEFERRED",
+    "NEED_PAYMENT",
+    "CONFIRMED",
 ];
 
 export const TASK_STATUS_DISPLAY_NAMES: Record<TaskStatus, string> = {
@@ -104,6 +106,8 @@ export const TASK_STATUS_DISPLAY_NAMES: Record<TaskStatus, string> = {
     "GHOSTED": "Ghosted",
     "INVALID_CONTACT": "Invalid Contact",
     "DEFERRED": "Deferred",
+    "NEED_PAYMENT" : "Need Payment",
+    "CONFIRMED" : "Confirmed",
 };
 
 
