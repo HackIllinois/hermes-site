@@ -21,7 +21,7 @@ export const AddEditSponsor =({ open, initial, onClose, onSubmit }: SponsorFormD
     status: (initial?.status as SponsorStatus) ?? 'NOT_CONTACTED',
     created_at: initial?.created_at ?? new Date().toISOString(),
     updated_at: new Date().toISOString(),
-    contact_tasks: initial?.contact_tasks ?? [],
+    active_task: initial?.active_task ?? null,
   });
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export const AddEditSponsor =({ open, initial, onClose, onSubmit }: SponsorFormD
         status: (initial?.status as SponsorStatus) ?? 'NOT_CONTACTED',
         created_at: initial?.created_at ?? new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        contact_tasks: initial?.contact_tasks ?? []
+        active_task: initial?.active_task ?? null,
       });
     }
   }, [open, initial]);
@@ -42,15 +42,16 @@ export const AddEditSponsor =({ open, initial, onClose, onSubmit }: SponsorFormD
   const canSubmit =
     form.sponsor_name.trim().length > 0 &&
     form.sponsor_email.trim().length > 0 &&
-    isValidEmail(form.sponsor_email);
+    isValidEmail(form.sponsor_email) &&
+    (form.company_name ?? '').trim().length > 0;
 
   const handleChange = (k: keyof Sponsor) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((f) => ({ ...f, [k]: e.target.value }));
   };
 
   const handleSubmit = () => {
-    // we don't actually send contact_tasks to the backend, so we need to remove it from the form
-    const { contact_tasks, ...dataToSend } = form;
+    // we don't actually send active_task to the backend, so we need to remove it from the form
+    const { active_task, ...dataToSend } = form;
     onSubmit({
       ...dataToSend,
       updated_at: new Date().toISOString(),
@@ -82,7 +83,7 @@ export const AddEditSponsor =({ open, initial, onClose, onSubmit }: SponsorFormD
             }
             disabled={editing} 
           />
-          <TextField label="Company" value={form.company_name ?? ''} onChange={handleChange('company_name')} />
+          <TextField label="Company" value={form.company_name ?? ''} onChange={handleChange('company_name')} required />
           <TextField
             label="Status"
             select
