@@ -1,6 +1,7 @@
 import ContactsIcon from '@mui/icons-material/Contacts';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import BoltIcon from '@mui/icons-material/Bolt';
+import LogoutIcon from '@mui/icons-material/Logout';
 import {
   Box,
   Drawer,
@@ -12,14 +13,16 @@ import {
   Typography,
 } from '@mui/material';
 import { useEffect, useMemo } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { watchEmailSync } from '../util/api/emails';
+import { logout } from '../util/api/auth';
 import TextSnippetIcon from '@mui/icons-material/TextSnippet';
 
 const drawerWidth = 240;
 
 export default function AppLayout() {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const selected = useMemo<'tasks' | 'sponsors' | 'templates'>(() => {
     if (pathname.endsWith('/sponsors')) return 'sponsors';
     if (pathname.endsWith('/templates')) return 'templates';
@@ -27,25 +30,26 @@ export default function AppLayout() {
   }, [pathname]);
 
   useEffect(() => {
-    // This effect runs once when the main app layout mounts.
-    // This is the perfect time to ensure the user is subscribed
-    // to Gmail push notifications.
-    
     const initEmailSync = async () => {
       try {
-        // Call the /watch endpoint. The backend will handle the
-        // logic of creating or renewing the watch.
         await watchEmailSync();
         console.log("Email sync watch successfully initiated or renewed.");
       } catch (err) {
-        // Don't block the user, just log the error.
-        // The daily cron job will try again later.
         console.error("Failed to initiate email sync watch:", err);
       }
     };
 
     initEmailSync();
-  }, []); // only call once when the app layout mounts
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (err) {
+      console.error("Logout API call failed:", err);
+    }
+    navigate('/');
+  };
 
   return (
     <Box
@@ -64,11 +68,13 @@ export default function AppLayout() {
             width: drawerWidth,
             boxSizing: 'border-box',
             backgroundColor: 'white',
+            display: 'flex',
+            flexDirection: 'column',
           },
           boxShadow: 2
         }}
       >
-        <List>
+        <List sx={{ flexGrow: 1 }}>
 
           <Stack
             direction="row"
@@ -114,6 +120,15 @@ export default function AppLayout() {
               <TextSnippetIcon />
             </ListItemIcon>
             <ListItemText primary="Templates" />
+          </ListItemButton>
+        </List>
+
+        <List>
+          <ListItemButton onClick={handleLogout}>
+            <ListItemIcon sx={{ minWidth: 40 }}>
+              <LogoutIcon />
+            </ListItemIcon>
+            <ListItemText primary="Logout" />
           </ListItemButton>
         </List>
       </Drawer>

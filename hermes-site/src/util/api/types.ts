@@ -115,7 +115,7 @@ export type Sponsor = {
     sponsor_name: string;
     status: SponsorStatus;
     updated_at: string | null;
-    contact_tasks: SponsorTask[];
+    active_task: SponsorTask | null;
 }
 
 export type SponsorStatus = "NOT_CONTACTED" | "CONTACTED" | "REJECTED" | "NEED_PAYMENT" | "CONFIRMED" | "INVALID_CONTACT" | "DEFERRED";

@@ -1,7 +1,6 @@
 import api from "./api";
 import type { Sponsor } from "./types";
 
-// Replace BASE_URL and path strings with your backend routes.
 export const getSponsors = async (): Promise<Sponsor[]> => {
   const { data } = await api.get<Sponsor[]>('/sponsors');
   return data;
@@ -12,24 +11,11 @@ export const createSponsor = async (payload: Sponsor): Promise<Sponsor> => {
   return data;
 }
 
-// TODO: Implement this function.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const updateSponsor = async (sponsor_email: string, _: Partial<Sponsor>): Promise<Sponsor> => {
-  console.log('Functionality not implemented yet.');
-  return {
-    company_name: '',
-    created_at: '',
-    notes: '',
-    sponsor_email: sponsor_email,
-    sponsor_name: '',
-    status: 'NOT_CONTACTED',
-    updated_at: '',
-    contact_tasks: [],
-  };
+export const updateSponsor = async (sponsor_email: string, updates: Partial<Sponsor>): Promise<Sponsor> => {
+  const { data } = await api.patch<Sponsor>(`/sponsors/${encodeURIComponent(sponsor_email)}`, updates);
+  return data;
 }
 
-// TODO: Implement this function.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const deleteSponsor = async (_: string): Promise<void> => {
-  console.log('Functionality not implemented yet.');
+export const deleteSponsor = async (sponsor_email: string): Promise<void> => {
+  await api.delete(`/sponsors/${encodeURIComponent(sponsor_email)}`);
 }
